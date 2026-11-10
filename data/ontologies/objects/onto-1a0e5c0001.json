@@ -1,24 +1,25 @@
 {
   "id": "onto-1a0e5c0001",
-  "name": "Онтология инновационной экосистемы вуза",
-  "domain": "Управление инновациями в университете: подразделения, проекты, РИД, партнёры и меры поддержки",
-  "description": "Сквозная модель предметной области офиса проректора по инновациям: кто в вузе создаёт инновации (исследователи, коллективы, студенты), через какие подразделения они проходят (ЦТТ, стартап-студия, акселератор, бизнес-инкубатор), какие результаты получаются (РИД, технологические проекты, стартапы, МТК), кто их поддерживает и покупает (фонды, индустриальные партнёры, инвесторы) и какими показателями это измеряется. Основа для дашборда проректора, агентов и RAG-баз платформы.",
+  "name": "Онтология рынка и бизнес-модели стартапа",
+  "domain": "Клиенты, сегменты, рынок, конкуренты, ценностное предложение и экономика продукта технологического стартапа",
+  "description": "Модель того, как стартап зарабатывает: кто клиент и какую проблему решаем (сегменты, лица, принимающие решение, работы и боли клиента), чем клиент решает задачу сегодня (конкуренты и альтернативы), насколько велик рынок (TAM, SAM, SOM), как мы доходим до клиента (каналы) и как устроены деньги (модель выручки, цена, себестоимость, юнит-экономика). Основа для агентов «Аналитик рынка» и «Юнит-экономист», дашборда стартапа и RAG-баз о рынке и финансах.",
   "author": "Команда AIOS",
   "tags": [
-    "инновационная экосистема",
-    "проректор по инновациям",
-    "РИД",
-    "стартапы",
-    "МТК"
+    "рынок",
+    "бизнес-модель",
+    "TAM SAM SOM",
+    "конкуренты",
+    "юнит-экономика",
+    "сегменты"
   ],
   "classes": [
     {
-      "id": "university",
-      "name": "Университет",
-      "description": "Образовательная организация высшего образования, в которой выстраивается инновационная экосистема.",
+      "id": "startup",
+      "name": "Стартап",
+      "description": "Команда, которая ищет воспроизводимую и масштабируемую бизнес-модель вокруг продукта.",
       "synonyms": [
-        "вуз",
-        "университет"
+        "компания",
+        "проект"
       ],
       "attributes": [
         {
@@ -27,635 +28,505 @@
           "type": "string"
         },
         {
-          "id": "program",
-          "name": "Участие в программах развития (Приоритет-2030, ПИШ)",
-          "type": "string"
+          "id": "stage",
+          "name": "Стадия",
+          "type": "enum"
         }
       ]
     },
     {
-      "id": "unit",
-      "name": "Подразделение инновационной инфраструктуры",
-      "description": "Структурное подразделение вуза, сопровождающее путь от идеи до рынка.",
+      "id": "product",
+      "name": "Продукт",
+      "description": "То, что стартап продаёт клиенту: устройство, ПО, сервис или их комбинация.",
       "synonyms": [
-        "инфраструктура поддержки"
+        "решение",
+        "MVP"
       ],
       "attributes": [
         {
-          "id": "head",
-          "name": "Руководитель",
-          "type": "string"
-        },
-        {
-          "id": "headcount",
-          "name": "Штат",
-          "type": "int"
+          "id": "form",
+          "name": "Форма поставки",
+          "type": "enum"
         }
       ]
     },
     {
-      "id": "ttc",
-      "name": "Центр трансфера технологий",
-      "description": "Выявляет и охраняет РИД, ищет лицензиатов, сопровождает сделки.",
-      "parent": "unit",
+      "id": "value_prop",
+      "name": "Ценностное предложение",
+      "description": "Почему клиент выберет продукт: какую работу выполняет, какую боль снимает, какую выгоду создаёт.",
       "synonyms": [
-        "ЦТТ",
-        "офис трансфера технологий",
-        "TTO"
+        "ценность",
+        "value proposition",
+        "УТП"
       ]
     },
     {
-      "id": "studio",
-      "name": "Стартап-студия",
-      "description": "Собирает стартапы вокруг технологий вуза: команда, MVP, первые продажи, привлечение инвестиций.",
-      "parent": "unit",
+      "id": "segment",
+      "name": "Сегмент клиентов",
+      "description": "Группа клиентов с общей проблемой, сходным процессом покупки и общим каналом.",
       "synonyms": [
-        "университетская стартап-студия",
-        "венчурный билдер"
-      ]
-    },
-    {
-      "id": "accelerator",
-      "name": "Акселератор",
-      "description": "Программа ускоренного развития проектов: трекинг, эксперты, демо-день.",
-      "parent": "unit",
-      "synonyms": [
-        "акселерационная программа",
-        "предакселератор"
-      ]
-    },
-    {
-      "id": "incubator",
-      "name": "Бизнес-инкубатор",
-      "description": "Площадка для ранних команд: рабочие места, консультации, сервисы.",
-      "parent": "unit",
-      "synonyms": [
-        "инкубатор",
-        "коворкинг"
-      ]
-    },
-    {
-      "id": "person",
-      "name": "Участник экосистемы",
-      "description": "Человек, вовлечённый в инновационную деятельность вуза.",
-      "attributes": [
-        {
-          "id": "role",
-          "name": "Роль",
-          "type": "string"
-        },
-        {
-          "id": "department",
-          "name": "Кафедра / институт",
-          "type": "string"
-        }
-      ]
-    },
-    {
-      "id": "researcher",
-      "name": "Исследователь",
-      "description": "Научный сотрудник или преподаватель — автор технологий и РИД.",
-      "parent": "person",
-      "synonyms": [
-        "учёный",
-        "автор РИД"
-      ]
-    },
-    {
-      "id": "student_founder",
-      "name": "Студент-основатель",
-      "description": "Студент или аспирант, создающий стартап (в т.ч. «Стартап как диплом»).",
-      "parent": "person",
-      "synonyms": [
-        "студенческий стартапер"
-      ]
-    },
-    {
-      "id": "team",
-      "name": "Проектная команда",
-      "description": "Коллектив, развивающий технологический проект или стартап.",
-      "synonyms": [
-        "стартап-коллектив",
-        "МНК"
+        "целевая аудитория",
+        "ЦА",
+        "ICP"
       ],
       "attributes": [
         {
           "id": "size",
-          "name": "Численность",
+          "name": "Число клиентов",
           "type": "int"
         },
         {
-          "id": "funding",
-          "name": "Источник финансирования",
-          "type": "enum"
+          "id": "check",
+          "name": "Средний чек в год, тыс. ₽",
+          "type": "float"
         }
       ]
     },
     {
-      "id": "rid",
-      "name": "Результат интеллектуальной деятельности",
-      "description": "Охраняемый результат: изобретение, полезная модель, программа ЭВМ, база данных, ноу-хау.",
+      "id": "early_adopter",
+      "name": "Ранние последователи",
+      "description": "Часть сегмента, у которой проблема острее всего и которая готова пробовать новое первой.",
+      "parent": "segment",
       "synonyms": [
-        "РИД",
-        "интеллектуальная собственность",
-        "ИС"
+        "early adopters",
+        "первые клиенты"
+      ]
+    },
+    {
+      "id": "customer_job",
+      "name": "Работа клиента",
+      "description": "Задача, которую клиент пытается выполнить (Jobs to be Done).",
+      "synonyms": [
+        "JTBD",
+        "задача клиента"
+      ]
+    },
+    {
+      "id": "pain",
+      "name": "Боль клиента",
+      "description": "Проблема, риск или затраты, мешающие выполнить работу; лучше всего — с ценой в рублях или часах.",
+      "synonyms": [
+        "проблема",
+        "pain"
       ],
       "attributes": [
         {
-          "id": "type",
-          "name": "Вид РИД",
-          "type": "enum"
-        },
-        {
-          "id": "year",
-          "name": "Год регистрации",
-          "type": "int"
-        },
-        {
-          "id": "perspective",
-          "name": "Перспективность",
-          "type": "enum"
-        },
-        {
-          "id": "support_cost",
-          "name": "Затраты на поддержание, тыс. ₽/год",
-          "type": "float"
-        }
-      ]
-    },
-    {
-      "id": "patent",
-      "name": "Патент",
-      "description": "Охранный документ на изобретение, полезную модель или промышленный образец.",
-      "parent": "rid",
-      "synonyms": [
-        "патент на изобретение",
-        "патент на ПМ"
-      ]
-    },
-    {
-      "id": "software",
-      "name": "Программа для ЭВМ / база данных",
-      "description": "Зарегистрированная программа или БД — частый РИД ИТ-проектов.",
-      "parent": "rid",
-      "synonyms": [
-        "свидетельство о регистрации программы"
-      ]
-    },
-    {
-      "id": "knowhow",
-      "name": "Ноу-хау",
-      "description": "Секрет производства, охраняемый режимом коммерческой тайны.",
-      "parent": "rid",
-      "synonyms": [
-        "секрет производства"
-      ]
-    },
-    {
-      "id": "project",
-      "name": "Инновационный проект",
-      "description": "Проект по доведению технологии до применения; измеряется уровнем готовности (УГТ).",
-      "attributes": [
-        {
-          "id": "trl",
-          "name": "УГТ",
-          "type": "int"
-        },
-        {
-          "id": "trl_since",
-          "name": "На текущем УГТ с",
-          "type": "datetime"
-        },
-        {
-          "id": "budget",
-          "name": "Бюджет, тыс. ₽",
+          "id": "cost",
+          "name": "Цена проблемы для клиента, тыс. ₽ в год",
           "type": "float"
         },
         {
-          "id": "stage",
-          "name": "Стадия финансирования",
-          "type": "enum"
-        }
-      ]
-    },
-    {
-      "id": "tech_project",
-      "name": "Технологический проект",
-      "description": "Проект развития технологии внутри вуза (НИОКР, ПИШ, заказ индустрии).",
-      "parent": "project"
-    },
-    {
-      "id": "startup",
-      "name": "Стартап",
-      "description": "Проект, нацеленный на создание бизнеса с масштабируемой моделью.",
-      "parent": "project",
-      "synonyms": [
-        "технологический стартап",
-        "университетский стартап"
-      ]
-    },
-    {
-      "id": "initiative",
-      "name": "Управленческая инициатива",
-      "description": "Проект офиса проректора по изменению экосистемы: запуск стартап-студии, программа трансфера и т.п.",
-      "parent": "project",
-      "synonyms": [
-        "программа развития",
-        "управленческий проект"
-      ]
-    },
-    {
-      "id": "mtk",
-      "name": "Малая технологическая компания",
-      "description": "Компания со статусом МТК по 478-ФЗ «О развитии технологических компаний» (реестр МТК, критерии — ПП РФ № 1847 от 02.11.2023), созданная на технологиях вуза или вокруг его команды.",
-      "synonyms": [
-        "МТК",
-        "технологическая компания",
-        "spin-off"
-      ],
-      "attributes": [
-        {
-          "id": "inn",
-          "name": "ИНН",
-          "type": "string"
-        },
-        {
-          "id": "share",
-          "name": "Доля вуза, %",
-          "type": "float"
-        },
-        {
-          "id": "revenue",
-          "name": "Выручка, тыс. ₽",
-          "type": "float"
-        },
-        {
-          "id": "in_registry",
-          "name": "В реестре МТК",
-          "type": "bool"
-        }
-      ]
-    },
-    {
-      "id": "spinoff",
-      "name": "Хозяйственное общество вуза",
-      "description": "Общество, созданное вузом для внедрения его РИД (ст. 103 273-ФЗ); вклад вуза — право использования РИД. Может получить статус МТК.",
-      "synonyms": [
-        "МИП",
-        "малое инновационное предприятие",
-        "хозобщество по 273-ФЗ"
-      ],
-      "attributes": [
-        {
-          "id": "share",
-          "name": "Доля вуза, %",
-          "type": "float"
-        },
-        {
-          "id": "contribution",
-          "name": "Вклад вуза (РИД)",
+          "id": "frequency",
+          "name": "Частота",
           "type": "string"
         }
       ]
     },
     {
-      "id": "license",
-      "name": "Лицензионный договор",
-      "description": "Предоставление права использования РИД на условиях лицензии (ст. 1235 ГК РФ).",
+      "id": "decision_maker",
+      "name": "Лицо, принимающее решение",
+      "description": "Кто в компании-клиенте решает о покупке, кто платит и кто пользуется.",
       "synonyms": [
-        "лицензия",
-        "сублицензия"
-      ],
+        "ЛПР",
+        "закупщик",
+        "пользователь"
+      ]
+    },
+    {
+      "id": "market",
+      "name": "Рынок",
+      "description": "Совокупность клиентов и их расходов на решение задачи.",
       "attributes": [
         {
-          "id": "kind",
-          "name": "Вид лицензии",
-          "type": "enum"
-        },
-        {
-          "id": "royalty",
-          "name": "Роялти, %",
-          "type": "float"
+          "id": "unit",
+          "name": "Единицы",
+          "type": "string"
         }
       ]
     },
     {
-      "id": "partner",
-      "name": "Индустриальный партнёр",
-      "description": "Компания — заказчик НИОКР, пилотный клиент, лицензиат.",
+      "id": "tam",
+      "name": "TAM",
+      "description": "Весь объём рынка: все клиенты, которые в принципе могли бы купить решение задачи.",
+      "parent": "market",
       "synonyms": [
-        "индустрия",
-        "заказчик",
-        "лицензиат"
+        "общий объём рынка",
+        "total addressable market"
       ]
     },
     {
-      "id": "investor",
-      "name": "Инвестор",
-      "description": "Венчурный фонд, бизнес-ангел, корпоративный фонд, вкладывающий в стартап.",
+      "id": "sam",
+      "name": "SAM",
+      "description": "Часть TAM, доступная нашему продукту, географии и каналу.",
+      "parent": "market",
       "synonyms": [
-        "венчурный фонд",
-        "бизнес-ангел",
-        "CVC"
+        "доступный рынок",
+        "serviceable available market"
       ]
     },
     {
-      "id": "support",
-      "name": "Мера поддержки",
-      "description": "Грант, конкурс, акселерационная программа или льгота для проекта.",
+      "id": "som",
+      "name": "SOM",
+      "description": "Часть SAM, которую реально получить за 3–5 лет с нашей командой и деньгами.",
+      "parent": "market",
       "synonyms": [
-        "инструмент поддержки"
+        "достижимый рынок",
+        "serviceable obtainable market"
+      ]
+    },
+    {
+      "id": "competitor",
+      "name": "Конкурент или альтернатива",
+      "description": "Чем клиент решает задачу сегодня: прямые конкуренты, косвенные решения, «сделай сам», «ничего не делать».",
+      "synonyms": [
+        "конкурент",
+        "альтернатива",
+        "аналог"
       ],
       "attributes": [
         {
-          "id": "operator",
-          "name": "Оператор",
+          "id": "price",
+          "name": "Цена",
           "type": "string"
         },
         {
-          "id": "amount",
-          "name": "Размер, тыс. ₽",
+          "id": "strength",
+          "name": "Сильная сторона",
+          "type": "string"
+        },
+        {
+          "id": "weakness",
+          "name": "Слабая сторона",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "id": "channel",
+      "name": "Канал",
+      "description": "Путь к клиенту: прямые продажи, партнёры-интеграторы, маркетплейсы, выставки, контент.",
+      "synonyms": [
+        "канал продаж",
+        "канал привлечения"
+      ],
+      "attributes": [
+        {
+          "id": "cac",
+          "name": "CAC в канале, тыс. ₽",
+          "type": "float"
+        },
+        {
+          "id": "cycle",
+          "name": "Цикл сделки, мес.",
           "type": "float"
         }
       ]
     },
     {
-      "id": "grant",
-      "name": "Грант",
-      "description": "Безвозмездное финансирование: Фонд содействия инновациям, РНФ, гранты Минобрнауки.",
-      "parent": "support",
+      "id": "revenue_model",
+      "name": "Модель выручки",
+      "description": "За что и как платит клиент: продажа, подписка, внедрение + поддержка, лицензия, плата за результат.",
       "synonyms": [
-        "субсидия",
-        "конкурсное финансирование"
+        "модель монетизации",
+        "бизнес-модель"
       ]
     },
     {
-      "id": "venture_investment",
-      "name": "Венчурные инвестиции",
-      "description": "Финансирование в обмен на долю в компании.",
-      "parent": "support",
-      "synonyms": [
-        "раунд",
-        "pre-seed",
-        "seed"
-      ]
-    },
-    {
-      "id": "trl",
-      "name": "Уровень готовности технологии",
-      "description": "Шкала УГТ 1–9 (ГОСТ Р 58048-2017): от идеи до промышленной эксплуатации.",
-      "synonyms": [
-        "УГТ",
-        "TRL"
-      ],
-      "attributes": [
-        {
-          "id": "level",
-          "name": "Уровень",
-          "type": "int"
-        }
-      ]
-    },
-    {
-      "id": "kpi",
-      "name": "Показатель инновационной деятельности",
-      "description": "Метрика для дашборда и отчётности: число РИД, МТК, доход от лицензий, внебюджет.",
-      "synonyms": [
-        "KPI",
-        "метрика",
-        "показатель"
-      ],
+      "id": "price",
+      "name": "Цена",
+      "description": "Сколько платит клиент за единицу продукта или период.",
       "attributes": [
         {
           "id": "value",
-          "name": "Значение",
+          "name": "Значение, тыс. ₽",
           "type": "float"
         },
         {
-          "id": "target",
-          "name": "Целевое значение",
-          "type": "float"
+          "id": "period",
+          "name": "Период",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "id": "cost",
+      "name": "Себестоимость и расходы",
+      "description": "Переменные затраты на единицу продукта и постоянные расходы команды.",
+      "synonyms": [
+        "COGS",
+        "затраты"
+      ]
+    },
+    {
+      "id": "unit_economics",
+      "name": "Юнит-экономика",
+      "description": "Экономика одного клиента или одной продажи: выручка, маржа, CAC, LTV, окупаемость.",
+      "synonyms": [
+        "unit economics",
+        "экономика продукта"
+      ]
+    },
+    {
+      "id": "m_cac",
+      "name": "CAC",
+      "description": "Стоимость привлечения одного клиента: расходы на продажи и маркетинг / число новых клиентов.",
+      "parent": "unit_economics"
+    },
+    {
+      "id": "m_ltv",
+      "name": "LTV",
+      "description": "Валовая маржа, которую клиент приносит за всё время сотрудничества.",
+      "parent": "unit_economics",
+      "synonyms": [
+        "CLV",
+        "пожизненная ценность клиента"
+      ]
+    },
+    {
+      "id": "m_margin",
+      "name": "Валовая маржа",
+      "description": "Доля выручки, остающаяся после переменных затрат.",
+      "parent": "unit_economics",
+      "synonyms": [
+        "gross margin"
+      ]
+    },
+    {
+      "id": "m_payback",
+      "name": "Окупаемость CAC",
+      "description": "За сколько месяцев маржа с клиента возвращает затраты на его привлечение.",
+      "parent": "unit_economics"
+    },
+    {
+      "id": "data_source",
+      "name": "Источник данных о рынке",
+      "description": "Откуда взята цифра: статистика, реестр, отраслевой отчёт, закупки, интервью.",
+      "synonyms": [
+        "источник",
+        "данные"
+      ],
+      "attributes": [
+        {
+          "id": "url",
+          "name": "Ссылка",
+          "type": "string"
+        },
+        {
+          "id": "year",
+          "name": "Год",
+          "type": "int"
+        }
+      ]
+    },
+    {
+      "id": "assumption",
+      "name": "Допущение",
+      "description": "Число или утверждение, принятое без проверки; кандидат в гипотезу.",
+      "attributes": [
+        {
+          "id": "checked",
+          "name": "Проверено",
+          "type": "bool"
         }
       ]
     }
   ],
   "relations": [
     {
-      "id": "has_unit",
-      "name": "имеет подразделение",
-      "domain_class": "university",
-      "range_class": "unit"
-    },
-    {
-      "id": "author_of",
-      "name": "является автором",
-      "domain_class": "researcher",
-      "range_class": "rid"
-    },
-    {
-      "id": "member_of",
-      "name": "входит в команду",
-      "domain_class": "person",
-      "range_class": "team"
-    },
-    {
-      "id": "develops",
-      "name": "развивает",
-      "domain_class": "team",
-      "range_class": "project"
-    },
-    {
-      "id": "based_on",
-      "name": "основан на РИД",
-      "domain_class": "project",
-      "range_class": "rid"
-    },
-    {
-      "id": "supported_by",
-      "name": "получает поддержку",
-      "domain_class": "project",
-      "range_class": "support"
-    },
-    {
-      "id": "accompanies",
-      "name": "сопровождает",
-      "domain_class": "unit",
-      "range_class": "project"
-    },
-    {
-      "id": "at_level",
-      "name": "находится на уровне",
-      "domain_class": "project",
-      "range_class": "trl"
-    },
-    {
-      "id": "becomes",
-      "name": "преобразуется в",
+      "id": "offers",
+      "name": "предлагает",
       "domain_class": "startup",
-      "range_class": "mtk"
+      "range_class": "product"
     },
     {
-      "id": "licenses",
-      "name": "передаёт права по",
-      "domain_class": "university",
-      "range_class": "license"
+      "id": "delivers",
+      "name": "несёт",
+      "domain_class": "product",
+      "range_class": "value_prop"
     },
     {
-      "id": "license_object",
-      "name": "предмет лицензии",
-      "domain_class": "license",
-      "range_class": "rid"
+      "id": "targets",
+      "name": "нацелен на",
+      "domain_class": "value_prop",
+      "range_class": "segment"
     },
     {
-      "id": "licensee",
-      "name": "лицензиат",
-      "domain_class": "license",
-      "range_class": "partner"
+      "id": "does_job",
+      "name": "выполняет работу",
+      "domain_class": "segment",
+      "range_class": "customer_job"
     },
     {
-      "id": "invests_in",
-      "name": "инвестирует в",
-      "domain_class": "investor",
-      "range_class": "startup"
+      "id": "has_pain",
+      "name": "испытывает боль",
+      "domain_class": "segment",
+      "range_class": "pain"
     },
     {
-      "id": "orders",
-      "name": "заказывает НИОКР",
-      "domain_class": "partner",
-      "range_class": "tech_project"
+      "id": "decides",
+      "name": "решение принимает",
+      "domain_class": "segment",
+      "range_class": "decision_maker"
     },
     {
-      "id": "founder_of",
-      "name": "основатель",
-      "domain_class": "student_founder",
-      "range_class": "startup"
+      "id": "relieves",
+      "name": "снимает",
+      "domain_class": "value_prop",
+      "range_class": "pain"
     },
     {
-      "id": "founds_mtk",
-      "name": "учреждает",
-      "domain_class": "university",
-      "range_class": "spinoff"
+      "id": "alternative_for",
+      "name": "альтернатива для",
+      "domain_class": "competitor",
+      "range_class": "segment"
     },
     {
-      "id": "gets_status",
-      "name": "получает статус",
-      "domain_class": "spinoff",
-      "range_class": "mtk"
+      "id": "competes_with",
+      "name": "конкурирует с",
+      "domain_class": "product",
+      "range_class": "competitor"
     },
     {
-      "id": "measured_by",
-      "name": "измеряется показателем",
-      "domain_class": "unit",
-      "range_class": "kpi"
+      "id": "reached_via",
+      "name": "привлекается через",
+      "domain_class": "segment",
+      "range_class": "channel"
     },
     {
-      "id": "manages",
-      "name": "управляет развитием",
-      "domain_class": "initiative",
-      "range_class": "unit"
+      "id": "monetized_by",
+      "name": "монетизируется через",
+      "domain_class": "product",
+      "range_class": "revenue_model"
+    },
+    {
+      "id": "priced_at",
+      "name": "имеет цену",
+      "domain_class": "revenue_model",
+      "range_class": "price"
+    },
+    {
+      "id": "has_cost",
+      "name": "несёт затраты",
+      "domain_class": "product",
+      "range_class": "cost"
+    },
+    {
+      "id": "economics_of",
+      "name": "описывает экономику",
+      "domain_class": "unit_economics",
+      "range_class": "segment"
+    },
+    {
+      "id": "channel_cac",
+      "name": "определяет CAC",
+      "domain_class": "channel",
+      "range_class": "m_cac"
+    },
+    {
+      "id": "sized_as",
+      "name": "оценивается как",
+      "domain_class": "segment",
+      "range_class": "market"
+    },
+    {
+      "id": "sourced_from",
+      "name": "основано на источнике",
+      "domain_class": "market",
+      "range_class": "data_source"
+    },
+    {
+      "id": "rests_on",
+      "name": "опирается на допущение",
+      "domain_class": "unit_economics",
+      "range_class": "assumption"
     }
   ],
   "competency_questions": [
     {
       "id": "cq-1",
-      "question": "Какие проекты портфеля находятся на одном УГТ дольше двух лет?",
+      "question": "Какой сегмент выбрать для первых продаж и кто в нём принимает решение о покупке?",
       "coverage": [
-        "project",
-        "trl"
+        "segment",
+        "early_adopter",
+        "decision_maker"
       ]
     },
     {
       "id": "cq-2",
-      "question": "Какие патенты не имеют лицензиата, а затраты на их поддержание выше среднего?",
+      "question": "Каковы TAM, SAM и SOM продукта и на каких источниках и допущениях держится каждая цифра?",
       "coverage": [
-        "patent",
-        "license",
-        "partner"
+        "tam",
+        "sam",
+        "som",
+        "data_source",
+        "assumption"
       ]
     },
     {
       "id": "cq-3",
-      "question": "Какие стартапы студии уже получили венчурные инвестиции и от кого?",
+      "question": "Чем клиенты решают задачу сегодня и чем наш продукт лучше альтернатив?",
       "coverage": [
-        "startup",
-        "investor",
-        "venture_investment"
+        "competitor",
+        "value_prop",
+        "pain"
       ]
     },
     {
       "id": "cq-4",
-      "question": "Какие МТК созданы на основе РИД вуза и какая у них выручка?",
+      "question": "Сходится ли юнит-экономика: каковы LTV, CAC и окупаемость в каждом канале?",
       "coverage": [
-        "mtk",
-        "rid",
-        "university"
-      ]
-    },
-    {
-      "id": "cq-7",
-      "question": "Какие хозобщества вуза по 273-ФЗ ещё не получили статус МТК и чего им не хватает?",
-      "coverage": [
-        "spinoff",
-        "mtk"
+        "unit_economics",
+        "m_ltv",
+        "m_cac",
+        "m_payback",
+        "channel"
       ]
     },
     {
       "id": "cq-5",
-      "question": "Какие меры поддержки подходят проекту на УГТ 3–4 со студенческой командой?",
+      "question": "Какие допущения бизнес-модели ещё не проверены и какие из них сильнее всего влияют на деньги?",
       "coverage": [
-        "support",
-        "grant",
-        "trl",
-        "student_founder"
-      ]
-    },
-    {
-      "id": "cq-6",
-      "question": "Какое подразделение сопровождает проект и по каким KPI оценивается?",
-      "coverage": [
-        "unit",
-        "project",
-        "kpi"
+        "assumption",
+        "revenue_model",
+        "price"
       ]
     }
   ],
   "rag_hints": {
     "extraction_targets": [
-      "rid",
-      "patent",
-      "mtk",
-      "license",
-      "startup",
-      "grant",
-      "trl",
-      "kpi"
+      "segment",
+      "pain",
+      "competitor",
+      "tam",
+      "sam",
+      "som",
+      "price",
+      "m_cac",
+      "data_source"
     ],
     "retrieval_paths": [
-      "project → based_on → rid → license_object ← license",
-      "startup → becomes → mtk"
+      "segment → has_pain → pain ← relieves ← value_prop",
+      "segment → sized_as → market → sourced_from → data_source"
     ],
     "sources": [
-      "Реестр РИД вуза",
-      "Портфель проектов ЦТТ",
-      "Отчёт по Приоритет-2030"
+      "Заметки CustDev-интервью",
+      "Отраслевые отчёты и статистика",
+      "Материалы конкурентов",
+      "Финмодель команды"
     ]
   },
   "references": [
     {
-      "title": "Платформа университетского технологического предпринимательства",
-      "url": "https://univertechpred.ru/"
+      "title": "Росстат — официальная статистика",
+      "url": "https://rosstat.gov.ru/"
     },
     {
-      "title": "Программа «Приоритет-2030»",
-      "url": "https://priority2030.ru/"
+      "title": "ЕМИСС — единая межведомственная информационно-статистическая система",
+      "url": "https://www.fedstat.ru/"
     },
     {
-      "title": "ЕГИСУ НИОКТР — учёт НИОКР и РИД",
-      "url": "https://www.rosrid.ru/"
-    },
-    {
-      "title": "HEInnovate — рамка предпринимательского вуза (ЕК и ОЭСР)",
-      "url": "https://heinnovate.eu/"
+      "title": "ЕИС в сфере закупок",
+      "url": "https://zakupki.gov.ru/"
     }
   ],
   "status": "active"

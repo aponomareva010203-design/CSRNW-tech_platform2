@@ -8735,3 +8735,65 @@ body:has(.ws-search-overlay:not([hidden])) [data-tooltip]::after { display: none
 .sc-node-name, .sc-cat span, .sc-stage span { overflow-wrap: anywhere; hyphens: auto; }
 .sc-map-wrap { max-width: 100%; }
 .page--showcase { width: 100%; }
+
+/* ============================================================
+   Рабочий стол стартапа (index.html, js/dashboard.js):
+   доска гипотез, воронка CustDev, рынок, юнит-экономика, деньги
+   ============================================================ */
+
+.hyp-board { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.hyp-col { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 10px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.hyp-col--confirmed { background: #F1F9F4; }
+.hyp-col--refuted { background: var(--red-soft); }
+.hyp-col-head { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+.hyp-col-head b { color: var(--ink); }
+.hyp-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 10px; display: flex; flex-direction: column; gap: 5px; font-size: 13px; }
+.hyp-card-top { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.hyp-text { font-weight: 650; line-height: 1.35; }
+.hyp-meta { font-size: 12px; color: var(--ink-soft); line-height: 1.35; }
+.hyp-meta b { color: var(--ink); font-weight: 650; }
+.hyp-evidence { border-left: 3px solid var(--gold); padding-left: 6px; }
+.hyp-empty { color: var(--ink-soft); font-size: 13px; text-align: center; padding: 8px 0; }
+
+.funnel--many .funnel-step { padding: 12px 10px; }
+.funnel--many .funnel-title { font-size: 14px; }
+.funnel--many .funnel-arrow { width: 36px; }
+.funnel-step:nth-of-type(5) { background: #C2E6D0; }
+.funnel-step:nth-of-type(6) { background: #B1DFC3; }
+.funnel-arrow--bad span { color: var(--red); }
+
+.mkt { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.mkt-label { display: flex; justify-content: space-between; gap: 8px; font-size: 13.5px; }
+.mkt-track { height: 12px; border-radius: 6px; background: var(--paper-soft); overflow: hidden; margin: 4px 0; }
+.mkt-bar { display: block; height: 100%; border-radius: 6px; }
+.mkt-bar--tam { background: #9AA8BC; }
+.mkt-bar--sam { background: var(--green); }
+.mkt-bar--som { background: var(--gold); }
+
+.ue-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+.ue-cell { display: flex; flex-direction: column; gap: 2px; padding: 10px; border: 1px solid var(--line); border-top: 3px solid var(--gold); border-radius: var(--radius-md); min-width: 0; }
+.ue-cell--bad { border-top-color: var(--red); }
+.ue-label { font-size: 12px; font-weight: 600; color: var(--ink-soft); }
+.ue-value { font-size: 17px; font-weight: 750; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.ue-cell--bad .ue-value { color: var(--red); }
+
+.sw--rev { background: var(--gold); }
+.sw--cost { background: #9AA8BC; }
+.cash-chart { display: flex; gap: 6px; height: 220px; align-items: stretch; border-bottom: 1px solid var(--line); margin-bottom: 10px; overflow-x: auto; }
+.cash-col { flex: 1 0 36px; display: flex; flex-direction: column; align-items: stretch; cursor: default; }
+.cash-bars { flex: 1; display: flex; align-items: flex-end; justify-content: center; gap: 2px; }
+.cash-bar { width: 42%; min-height: 2px; border-radius: 3px 3px 0 0; }
+.cash-bar--rev { background: var(--gold); }
+.cash-bar--cost { background: #9AA8BC; }
+.cash-col--plan .cash-bar { opacity: .45; }
+.cash-col--zero .cash-bars { background: var(--red-soft); border-radius: 4px; }
+.cash-label { text-align: center; font-size: 11.5px; color: var(--ink-soft); margin-top: 4px; white-space: nowrap; }
+.cash-bal { text-align: center; font-size: 11.5px; font-weight: 700; min-height: 1.3em; font-variant-numeric: tabular-nums; }
+.cash-bal.is-neg, .txt-bad { color: var(--red); }
+
+@media (max-width: 900px) {
+  .hyp-board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .hyp-board, .ue-grid { grid-template-columns: 1fr; }
+}

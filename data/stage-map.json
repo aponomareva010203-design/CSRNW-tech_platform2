@@ -2,37 +2,55 @@
   "stages": [
     {
       "key": "onboarding",
-      "name_ru": "Онбординг проекта вуза",
+      "name_ru": "Онбординг стартапа",
       "order": 1,
       "skills": [
         "project-onboarding"
       ],
-      "next": "portfolio"
+      "next": "discovery"
     },
     {
-      "key": "portfolio",
-      "name_ru": "Портфель РИД и проектов",
+      "key": "discovery",
+      "name_ru": "Гипотезы и клиенты",
       "order": 2,
       "skills": [
-        "portfolio-analyst",
-        "ip-asset-evaluator"
+        "hypothesis-tester",
+        "custdev-interviewer"
       ],
-      "next": "ecosystem"
+      "next": "market"
     },
     {
-      "key": "ecosystem",
-      "name_ru": "Экосистема и стартапы",
+      "key": "market",
+      "name_ru": "Рынок и конкуренты",
       "order": 3,
       "skills": [
-        "ecosystem-analyst",
-        "venture-builder"
+        "market-analyst"
+      ],
+      "next": "economics"
+    },
+    {
+      "key": "economics",
+      "name_ru": "Экономика продукта",
+      "order": 4,
+      "skills": [
+        "unit-economist"
+      ],
+      "next": "funding"
+    },
+    {
+      "key": "funding",
+      "name_ru": "Финансирование и питч",
+      "order": 5,
+      "skills": [
+        "pitch-coach",
+        "support-navigator"
       ],
       "next": "agents"
     },
     {
       "key": "agents",
-      "name_ru": "Агенты вуза",
-      "order": 4,
+      "name_ru": "Агенты команды",
+      "order": 6,
       "skills": [
         "agent-builder"
       ],
@@ -41,7 +59,7 @@
     {
       "key": "models",
       "name_ru": "Модели",
-      "order": 5,
+      "order": 7,
       "skills": [
         "model-builder"
       ],

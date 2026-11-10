@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Модели — AIOS · Инновации университета</title>
-<link rel="stylesheet" href="css/style.css?v=20261030a">
+<title>Модели — AIOS · Техностартап</title>
+<link rel="stylesheet" href="css/style.css?v=20261110a">
 </head>
 <body>
 <div class="layout">
@@ -18,7 +18,7 @@
       <div class="side-group side-group--collapsible" data-side-group="dashboards">
         <button class="side-group-title side-group-toggle" type="button" aria-expanded="true" aria-controls="sideGroupDashboards">Дашборды</button>
         <div class="side-group-items" id="sideGroupDashboards">
-        <a class="side-link" href="index.html">Рабочий стол проректора</a>
+        <a class="side-link" href="index.html">Рабочий стол стартапа</a>
         <a class="side-link" href="pilot.html">Статус внедрения AIOS</a>
         <a class="side-link" href="showcase.html">Витрина механизмов поддержки</a>
         </div>
@@ -68,24 +68,24 @@
   <div class="page">
 
   <section class="section-head">
-    <a class="backlink" href="index.html">← AIOS · Инновации университета</a>
+    <a class="backlink" href="index.html">← AIOS · Техностартап</a>
     <h1>Модели</h1>
     <div class="rule"></div>
   </section>
 
   <section class="section-head-lead">
-    <p class="section-lead">Модели, которыми пользуется офис проректора по инновациям. <b>Модели офиса проректора</b> —
-      прозрачные расчётные модели для решений по портфелю: считаются прямо на странице, без LLM.
+    <p class="section-lead">Модели, которыми пользуется команда стартапа. <b>Модели стартапа</b> —
+      прозрачные расчёты юнит-экономики, размера рынка, runway и инвестиционной готовности: считаются прямо на странице, без LLM.
       <b>Модели проектов</b> — расчётные приборы, обученные на данных проектных команд.
-      <b>Открытые модели</b> — каталог открытых весов на Hugging Face для агентов, RAG-поиска и прогнозов KPI.</p>
+      <b>Открытые модели</b> — каталог открытых весов на Hugging Face для агентов, RAG-поиска и прогнозов.</p>
   </section>
 
   <section class="mdl-team" aria-labelledby="builtinTitle">
     <div class="mdl-team-head">
       <div>
-        <h2 class="models-title" id="builtinTitle">Модели офиса проректора</h2>
-        <p class="mdl-team-note">Демо-модели с экспертными коэффициентами: каждая показывает вклад каждого фактора в результат.
-          Откалибруйте коэффициенты на данных своего вуза (<code>frontend/js/innovation_models.js</code>) или обучите свою модель проекта.</p>
+        <h2 class="models-title" id="builtinTitle">Модели стартапа</h2>
+        <p class="mdl-team-note">Прозрачные формулы с демо-значениями стартапа «ВиброСенс»: подставьте свои цифры — результат пересчитается сразу.
+          Добавить свою модель или поменять формулы можно в <code>frontend/js/innovation_models.js</code>.</p>
       </div>
     </div>
     <div class="mdl-grid" id="gridBuiltin"></div>
@@ -94,7 +94,7 @@
   <!-- гостям и обычным пользователям: модели проектов только для администраторов -->
   <section class="section-locked" id="modelsLocked" hidden>
     <h2>Модели проектов доступны администраторам</h2>
-    <p>Создание, обучение и импорт моделей проектов сейчас открыты только администраторам платформы. Модели офиса проректора и каталог открытых моделей доступны всем.</p>
+    <p>Создание, обучение и импорт моделей проектов сейчас открыты только администраторам платформы. Модели стартапа и каталог открытых моделей доступны всем.</p>
   </section>
 
   <!-- модели проектов: только администраторам (открывает js/models.js) -->
@@ -121,8 +121,8 @@
     <button class="spoiler-toggle" type="button" aria-expanded="false" aria-controls="spoilerRepoBody">
       <span class="spoiler-head">
         <span class="spoiler-title">Открытые модели (Hugging Face)</span>
-        <span class="spoiler-note">Открытые веса для задач офиса проректора: русскоязычные LLM для агентов, эмбеддинги и реранкеры
-          для RAG-баз (Qdrant), патентные и научные эмбеддинги, прогноз KPI. Подключаются через OpenAI-совместимый эндпоинт
+        <span class="spoiler-note">Открытые веса для задач команды стартапа: русскоязычные LLM для агентов, эмбеддинги и реранкеры
+          для RAG-баз (Qdrant), патентные и научные эмбеддинги, прогноз выручки и спроса. Подключаются через OpenAI-совместимый эндпоинт
           (vLLM, Ollama, прокси-API) в «Админ-панели → Настройки внешних API».</span>
       </span>
       <span class="spoiler-chevron" aria-hidden="true"></span>
@@ -191,10 +191,10 @@
 <script src="js/cookie-consent.js?v=20261001b"></script>
 <script src="js/api.js?v=20261029a"></script>
 <script src="js/auth.js?v=20261029a"></script>
-<script src="js/innovation_models.js?v=20261029a"></script>
+<script src="js/innovation_models.js?v=20261110a"></script>
 <script src="js/models.js?v=20261029a"></script>
 <script src="js/agent_views.js?v=20260929m"></script>
 <script src="js/thinking.js?v=20260925zq"></script>
-<script src="js/workspace.js?v=20261029a"></script>
+<script src="js/workspace.js?v=20261110a"></script>
 </body>
 </html>

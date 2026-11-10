@@ -447,7 +447,7 @@
     /* ПИШ: ссылка — администраторам, остальным — «в разработке» */
     if (menuPish) menuPish.hidden = !isAdmin;
     if (menuPishLock) menuPishLock.hidden = isAdmin;
-    /* «Модели»: каталог открытых моделей и модели офиса проректора открыты
+    /* «Модели»: каталог открытых моделей и модели стартапа открыты
        всем; модели проектов на самой странице — только администраторам */
     if (menuModels) menuModels.hidden = false;
     if (tileModels) tileModels.hidden = false;

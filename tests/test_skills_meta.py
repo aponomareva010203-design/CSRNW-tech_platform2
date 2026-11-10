@@ -9,12 +9,12 @@ from api.runtime.config import get_settings
 def test_frontmatter_parsed_and_body_stripped():
     """Шаблон агента несёт рантайм-метаданные; тело начинается
     с заголовка, а не с YAML-блока (frontmatter — не часть протокола)."""
-    meta = datarepo.skill_meta("portfolio-analyst")
-    assert meta.get("stage") == "portfolio"
+    meta = datarepo.skill_meta("hypothesis-tester")
+    assert meta.get("stage") == "discovery"
     assert isinstance(meta.get("triggers"), list) and meta["triggers"]
     assert meta.get("status") == "template"
 
-    body = datarepo.skill_body(datarepo.get_skill("portfolio-analyst"))
+    body = datarepo.skill_body(datarepo.get_skill("hypothesis-tester"))
     assert not body.startswith("---")
     assert body.startswith("# Агент")
 
@@ -22,16 +22,16 @@ def test_frontmatter_parsed_and_body_stripped():
 def test_suggest_skills_matches_triggers():
     """Триггер-фраза в тексте предлагает навык; короткий текст и exclude
     отсекаются; регистр не важен."""
-    found = datarepo.suggest_skills("Нужен АНАЛИЗ ПАТЕНТОВ нашего университета")
-    assert [s["id"] for s in found] == ["portfolio-analyst"]
+    found = datarepo.suggest_skills("Нужна ЮНИТ-ЭКОНОМИКА нашего продукта")
+    assert [s["id"] for s in found] == ["unit-economist"]
 
-    assert datarepo.suggest_skills("патент") == []  # короче порога
+    assert datarepo.suggest_skills("юнит") == []  # короче порога
     assert datarepo.suggest_skills("коротко") == []
 
-    query = "подготовьте план достройки экосистемы вуза"
-    assert [s["id"] for s in datarepo.suggest_skills(query)] == ["ecosystem-analyst"]
-    excluded = datarepo.suggest_skills(query, exclude=["ecosystem-analyst"])
-    assert all(s["id"] != "ecosystem-analyst" for s in excluded)
+    query = "оцените размер рынка для нашего датчика"
+    assert [s["id"] for s in datarepo.suggest_skills(query)] == ["market-analyst"]
+    excluded = datarepo.suggest_skills(query, exclude=["market-analyst"])
+    assert all(s["id"] != "market-analyst" for s in excluded)
 
 
 def test_stage_map_chain_and_hot_reload(tmp_path, monkeypatch):
@@ -39,13 +39,13 @@ def test_stage_map_chain_and_hot_reload(tmp_path, monkeypatch):
     конвейера; правка файла подхватывается без перезапуска (кэш по mtime)."""
     stages = datarepo.stage_map()["stages"]
     keys = [s["key"] for s in stages]
-    assert keys[0] == "onboarding" and "portfolio" in keys and "agents" in keys
+    assert keys[0] == "onboarding" and "discovery" in keys and "agents" in keys
 
-    portfolio = datarepo.stage_entry("portfolio")
-    assert portfolio["next"] == "ecosystem"
-    assert datarepo.stage_of_skill("portfolio-analyst")["key"] == "portfolio"
-    assert datarepo.stage_of_skill("venture-builder")["key"] == "ecosystem"
-    assert datarepo.stage_next("portfolio")["key"] == "ecosystem"
+    discovery = datarepo.stage_entry("discovery")
+    assert discovery["next"] == "market"
+    assert datarepo.stage_of_skill("hypothesis-tester")["key"] == "discovery"
+    assert datarepo.stage_of_skill("pitch-coach")["key"] == "funding"
+    assert datarepo.stage_next("discovery")["key"] == "market"
     # каждый навык карты есть в каталоге, а его frontmatter указывает на свой этап
     for stage in stages:
         for skill_id in stage["skills"]:
@@ -84,12 +84,12 @@ def test_skills_suggest_endpoint_public():
     from api.main import app
 
     client = TestClient(app)
-    resp = client.get("/api/chat/skills-suggest", params={"q": "нужен трекер стартапов студии"})
+    resp = client.get("/api/chat/skills-suggest", params={"q": "нужна подготовка к питчу перед демо-днём"})
     assert resp.status_code == 200
     items = resp.json()["items"]
-    assert items and items[0]["id"] == "venture-builder"
+    assert items and items[0]["id"] == "pitch-coach"
 
-    short = client.get("/api/chat/skills-suggest", params={"q": "трекер"})
+    short = client.get("/api/chat/skills-suggest", params={"q": "питч"})
     assert short.status_code == 200
     assert short.json()["items"] == []
 
@@ -189,14 +189,14 @@ def test_chat_sets_session_stage_for_skill(tmp_path, monkeypatch):
     client = TestClient(app)
     resp = client.post(
         "/api/chat",
-        json={"message": "разберём портфель РИД", "skill_ids": ["portfolio-analyst"]},
+        json={"message": "проверим гипотезу о цене", "skill_ids": ["hypothesis-tester"]},
     )
     assert resp.status_code == 200
-    assert '"stage":"portfolio"' in resp.text.replace(" ", "")
+    assert '"stage":"discovery"' in resp.text.replace(" ", "")
 
     sid = client.get("/api/sessions").json()["items"][0]["id"]
     full = client.get(f"/api/sessions/{sid}").json()
-    assert full["stage"] == "portfolio"
+    assert full["stage"] == "discovery"
     kinds = [e.get("kind") for e in full.get("decision_log", [])]
     assert "stage_set" in kinds
 
@@ -236,13 +236,14 @@ def test_approval_registry_marks_configured_tools(tmp_path, monkeypatch):
     get_settings.cache_clear()
 
 
-TEMPLATE_IDS = ("portfolio-analyst", "ecosystem-analyst", "venture-builder", "ip-asset-evaluator")
+TEMPLATE_IDS = ("hypothesis-tester", "custdev-interviewer", "market-analyst", "unit-economist",
+                "pitch-coach", "support-navigator")
 TEMPLATE_SECTIONS = ("Назначение", "Роль", "Навыки (skills)", "Входные данные",
                      "Выходные данные", "Ограничения")
 
 
 def test_research_skills_cards_and_bodies(monkeypatch):
-    """Шаблоны агентов проректора: карточки в каталоге (категория general,
+    """Шаблоны агентов команды стартапа: карточки в каталоге (категория general,
     файл data/skills/<id через _>.md), frontmatter с триггерами, обязательные
     разделы тела; все инструменты, упомянутые в «Навыках», есть в рантайме."""
     import re
@@ -278,12 +279,12 @@ def test_research_skills_cards_and_bodies(monkeypatch):
 def test_research_skills_in_prompt_and_suggestions():
     from api.runtime.prompts import build_system_prompt
 
-    prompt = build_system_prompt(skill_ids=["portfolio-analyst"])
-    assert "Портфельный аналитик" in prompt and "read_data_file" in prompt
-    prompt = build_system_prompt(skill_ids=["ecosystem-analyst"])
-    assert "Аналитик экосистемы" in prompt and "get_organization" in prompt
+    prompt = build_system_prompt(skill_ids=["custdev-interviewer"])
+    assert "CustDev-интервьюер" in prompt and "read_data_file" in prompt
+    prompt = build_system_prompt(skill_ids=["support-navigator"])
+    assert "Навигатор мер поддержки" in prompt and "get_organization" in prompt
 
-    found = datarepo.suggest_skills("какие бесперспективные патенты стоит закрыть в этом году")
-    assert [s["id"] for s in found][0] == "portfolio-analyst"
-    found = datarepo.suggest_skills("оцените инновационная экосистема вуза: чего не хватает вузу")
-    assert [s["id"] for s in found][0] == "ecosystem-analyst"
+    found = datarepo.suggest_skills("помогите составить сценарий интервью с клиентами")
+    assert [s["id"] for s in found][0] == "custdev-interviewer"
+    found = datarepo.suggest_skills("посчитайте LTV CAC и финансовая модель на год")
+    assert [s["id"] for s in found][0] == "unit-economist"

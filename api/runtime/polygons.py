@@ -1,23 +1,29 @@
-"""Полигоны — симуляционная среда для проверки гипотез офиса проректора (api/runtime/polygons.py).
+"""Полигоны — симуляционная среда команды стартапа для проверки гипотез (api/runtime/polygons.py).
 
-Полигон — сохранённая модель инновационного портфеля вуза и набор сценариев,
-на которых проверяется гипотеза («стартап-студия даст ≥ 8 стартапов за 5 лет»,
-«удвоение внутренних грантов вытащит проекты из долины смерти УГТ 3–5»).
+Полигон — сохранённая финансовая модель стартапа и набор сценариев, на
+которых проверяется гипотеза («деньги не закончатся до раунда», «через
+интегратора CAC ниже — и мы выйдем в операционный плюс за 12 месяцев»).
 Два режима:
 
-  1. Сценарная модель (simulate): воронка проектов по УГТ 1–9. Каждый год
-     проект с вероятностью p_up переходит на следующий уровень, с p_drop
-     закрывается, иначе остаётся (и «застаивается»). Дойдя до exit_level,
-     проект выходит из портфеля — лицензией (доход каждый год) или стартапом
-     (привлечённые инвестиции). Бюджет ограничивает прогресс: если затраты
-     портфеля выше бюджета, шансы перехода пропорционально снижаются.
+  1. Сценарная модель (simulate): помесячная модель стартапа. Каждый месяц
+     бюджет на продажи и маркетинг приводит новых клиентов (в среднем
+     marketing / CAC, после задержки цикла продаж sales_lag_months), часть
+     клиентов уходит (отток churn), клиенты платят price в месяц с валовой
+     маржой gross_margin, команда тратит fixed_costs (растут на
+     fixed_growth % в месяц). Грант и инвестиционный раунд приходят в свой
+     месяц с заданной вероятностью; раунд — только если к этому месяцу
+     выручка в месяц (MRR) не ниже round_min_mrr. Если деньги ушли в минус —
+     кассовый разрыв, компания «умирает» в этом прогоне.
+     Неопределённость: CAC и отток в каждом прогоне случайно отклоняются от
+     ожиданий (cac_spread, churn_spread), приток клиентов — пуассоновский.
      Монте-Карло (runs прогонов) даёт среднее и коридор p10–p90, а гипотеза
      проверяется как доля прогонов, в которых метрика достигла цели.
      Считается без LLM, детерминированно при заданном seed.
-  2. ИИ-фокус-группа (panel_prompts / parse_opinion): виртуальные участники
-     экосистемы (инвестор, индустриальный партнёр, эксперт фонда, ЦТТ,
-     студент-основатель, финансовый директор) оценивают идею — вызов LLM
-     делает роутер api/routers/polygons.py.
+  2. ИИ-фокус-группа (panel_prompts / parse_opinion): виртуальные инвестор,
+     бизнес-ангел, эксперт фонда, клиенты и трекер акселератора оценивают
+     идею, гипотезу или питч — вызов LLM делает роутер api/routers/polygons.py.
+
+Суммы — тыс. ₽, время — месяцы.
 
 Хранение — как у остальных артефактов: примеры платформы в data/polygons/*.json
 (в git, только чтение), свои полигоны — AIOS_RUNTIME_DIR/polygons/{user_id}/{pg-…}.json.
@@ -39,23 +45,24 @@ from .config import get_settings
 USER_ID_RE = re.compile(r"^[a-f0-9]{12}$")
 POLYGON_ID_RE = re.compile(r"^pg-[a-f0-9]{10}$")
 
-MAX_YEARS = 10
+MAX_MONTHS = 60
 MAX_RUNS = 1000
 MAX_SCENARIOS = 6
-MAX_PROJECTS = 400  # предохранитель: размер портфеля в одном прогоне
-LEVELS = range(1, 10)
+MAX_CUSTOMERS = 100_000  # предохранитель: клиентов в одном прогоне
 
 METRICS = {
-    "startups": "Стартапы (выход через компанию)",
-    "licenses": "Лицензионные сделки",
-    "exits": "Все выходы на рынок",
-    "income": "Доход от лицензий, тыс. ₽",
-    "investments": "Привлечённые инвестиции, тыс. ₽",
-    "cost": "Затраты на портфель, тыс. ₽",
-    "roi": "Отдача на 1 ₽ затрат",
-    "stale": "Проекты-кандидаты на закрытие (застой)",
-    "active": "Активные проекты в портфеле",
+    "survived": "Доля прогонов без кассового разрыва (0–1)",
+    "cash": "Деньги на счёте в конце, тыс. ₽",
+    "min_cash": "Минимум денег на счёте, тыс. ₽",
+    "runway": "Месяцев до кассового разрыва (горизонт — если не было)",
+    "customers": "Клиенты в конце горизонта",
+    "mrr": "Выручка в месяц (MRR) в конце, тыс. ₽",
+    "revenue": "Выручка за весь горизонт, тыс. ₽",
+    "raised": "Привлечено грантов и инвестиций, тыс. ₽",
+    "breakeven": "Месяц выхода в операционный плюс (горизонт + 1 — не вышли)",
+    "ltv_cac": "LTV / CAC",
 }
+SERIES = ("customers", "mrr", "cash", "alive")
 OPS = (">=", "<=")
 
 
@@ -82,99 +89,88 @@ def _text(value, limit: int) -> str:
 # Параметры
 # ---------------------------------------------------------------------------
 
-DEFAULT_LEVELS = {
-    # p_up — шанс перейти на следующий УГТ за год, p_drop — шанс закрытия,
-    # cost — затраты на один проект в год, тыс. ₽ (ориентиры для демо)
-    1: {"p_up": 0.35, "p_drop": 0.10, "cost": 300},
-    2: {"p_up": 0.35, "p_drop": 0.12, "cost": 500},
-    3: {"p_up": 0.25, "p_drop": 0.15, "cost": 1200},
-    4: {"p_up": 0.20, "p_drop": 0.15, "cost": 2500},
-    5: {"p_up": 0.20, "p_drop": 0.12, "cost": 4000},
-    6: {"p_up": 0.25, "p_drop": 0.10, "cost": 6000},
-    7: {"p_up": 0.30, "p_drop": 0.08, "cost": 8000},
-    8: {"p_up": 0.35, "p_drop": 0.05, "cost": 9000},
-}
+# (ключ, значение по умолчанию, минимум, максимум, целое)
+PARAM_SPEC = (
+    ("horizon_months", 18, 3, MAX_MONTHS, True),
+    ("runs", 400, 20, MAX_RUNS, True),
+    ("seed", 2030, 0, 10**9, True),
+    ("start_cash", 4200, 0, 10_000_000, False),        # деньги на старте
+    ("fixed_costs", 450, 0, 1_000_000, False),         # команда, аренда, сервисы в месяц
+    ("fixed_growth", 2, -20, 50, False),               # рост постоянных расходов, % в месяц
+    ("marketing", 150, 0, 1_000_000, False),           # продажи и маркетинг в месяц
+    ("cac", 380, 0.01, 1_000_000, False),              # ожидаемая стоимость привлечения клиента
+    ("cac_spread", 30, 0, 200, False),                 # неопределённость CAC, %
+    ("price", 180, 0, 1_000_000, False),               # выручка с клиента в месяц (ARPA)
+    ("gross_margin", 0.62, -1, 1, False),              # валовая маржа, доля
+    ("churn", 0.03, 0, 1, False),                      # отток клиентов в месяц, доля
+    ("churn_spread", 30, 0, 200, False),               # неопределённость оттока, %
+    ("initial_customers", 1, 0, MAX_CUSTOMERS, True),
+    ("sales_lag_months", 3, 0, 24, True),              # цикл сделки: когда маркетинг начнёт приводить клиентов
+    ("grant_amount", 0, 0, 10_000_000, False),
+    ("grant_month", 6, 1, MAX_MONTHS, True),
+    ("grant_prob", 0.5, 0, 1, False),
+    ("round_amount", 0, 0, 10_000_000_000, False),
+    ("round_month", 12, 1, MAX_MONTHS, True),
+    ("round_prob", 0.3, 0, 1, False),
+    ("round_min_mrr", 0, 0, 1_000_000_000, False),     # раунд закрывается, только если MRR не ниже
+)
+PARAM_DEFAULTS = {key: default for key, default, *_ in PARAM_SPEC}
+
+# сценарий: относительные изменения, % (price_change: +20 — цена выше на 20 %)
+SCENARIO_RELATIVE = ("price_change", "cac_change", "churn_change")
+# сценарий: абсолютные значения вместо базовых (пусто — как в базе)
+SCENARIO_ABSOLUTE = ("marketing", "fixed_costs", "start_cash", "sales_lag_months", "gross_margin",
+                     "grant_amount", "grant_prob", "round_amount", "round_prob", "round_min_mrr")
 
 
 def normalize_params(raw: dict | None) -> dict:
     """Параметры модели с ограничениями; недостающее — значения по умолчанию."""
     raw = raw if isinstance(raw, dict) else {}
-    levels_raw = raw.get("levels") if isinstance(raw.get("levels"), dict) else {}
-    levels = {}
-    for lvl in range(1, 9):
-        src = levels_raw.get(str(lvl)) or levels_raw.get(lvl) or {}
-        d = DEFAULT_LEVELS[lvl]
-        levels[str(lvl)] = {
-            "p_up": _num(src.get("p_up"), d["p_up"], 0, 1),
-            "p_drop": _num(src.get("p_drop"), d["p_drop"], 0, 1),
-            "cost": _num(src.get("cost"), d["cost"], 0, 1_000_000),
-        }
-        total = levels[str(lvl)]["p_up"] + levels[str(lvl)]["p_drop"]
-        if total > 1:  # шансы перехода и закрытия делят один год
-            levels[str(lvl)]["p_up"] /= total
-            levels[str(lvl)]["p_drop"] /= total
-    initial_raw = raw.get("initial") if isinstance(raw.get("initial"), dict) else {}
-    initial = {str(l): _num(initial_raw.get(str(l)), 0, 0, MAX_PROJECTS, True) for l in range(1, 9)}
-    if sum(initial.values()) > MAX_PROJECTS:
-        raise PolygonError(f"В стартовом портфеле больше {MAX_PROJECTS} проектов")
-    exit_level = _num(raw.get("exit_level"), 7, 3, 9, True)
-    return {
-        "horizon_years": _num(raw.get("horizon_years"), 5, 1, MAX_YEARS, True),
-        "runs": _num(raw.get("runs"), 400, 20, MAX_RUNS, True),
-        "seed": _num(raw.get("seed"), 2030, 0, 10**9, True),
-        "initial": initial,
-        "intake_per_year": _num(raw.get("intake_per_year"), 10, 0, 200, True),
-        "entry_level": _num(raw.get("entry_level"), 2, 1, 8, True),
-        "exit_level": exit_level,
-        "levels": levels,
-        "p_license": _num(raw.get("p_license"), 0.5, 0, 1),
-        "license_income": _num(raw.get("license_income"), 1500, 0, 1_000_000),
-        "investment_per_startup": _num(raw.get("investment_per_startup"), 15000, 0, 10_000_000),
-        "annual_budget": _num(raw.get("annual_budget"), 0, 0, 100_000_000),
-        "fixed_cost": _num(raw.get("fixed_cost"), 0, 0, 10_000_000),
-        "stale_years": _num(raw.get("stale_years"), 2, 1, 10, True),
-    }
+    params = {key: _num(raw.get(key), default, lo, hi, integer)
+              for key, default, lo, hi, integer in PARAM_SPEC}
+    if params["initial_customers"] > MAX_CUSTOMERS:
+        raise PolygonError(f"Клиентов на старте больше {MAX_CUSTOMERS}")
+    return params
+
+
+def _spec(key):
+    for item in PARAM_SPEC:
+        if item[0] == key:
+            return item
+    raise KeyError(key)
 
 
 def normalize_scenario(raw: dict | None, i: int) -> dict:
-    """Сценарий — правки базовых параметров: приток, бюджет, усиление «долины смерти»."""
+    """Сценарий — правки базовых параметров: цена, CAC, отток, бюджеты, грант, раунд."""
     raw = raw if isinstance(raw, dict) else {}
     sc = {
         "id": _text(raw.get("id"), 40) or f"s{i + 1}",
         "name": _text(raw.get("name"), 120) or f"Сценарий {i + 1}",
         "description": _text(raw.get("description"), 600),
-        # относительные изменения, %: +30 — шанс перехода на УГТ 3–5 выше на 30 %
-        "valley_boost": _num(raw.get("valley_boost"), 0, -90, 300),
-        "up_boost": _num(raw.get("up_boost"), 0, -90, 300),
-        "drop_change": _num(raw.get("drop_change"), 0, -90, 300),
-        "p_license_change": _num(raw.get("p_license_change"), 0, -100, 100),
     }
-    for key, hi in (("intake_per_year", 200), ("annual_budget", 100_000_000), ("fixed_cost", 10_000_000)):
+    for key in SCENARIO_RELATIVE:
+        sc[key] = _num(raw.get(key), 0, -90, 500)
+    for key in SCENARIO_ABSOLUTE:
         if raw.get(key) not in (None, ""):
-            sc[key] = _num(raw.get(key), 0, 0, hi, key == "intake_per_year")
+            _, default, lo, hi, integer = _spec(key)
+            sc[key] = _num(raw.get(key), default, lo, hi, integer)
     return sc
 
 
 def apply_scenario(params: dict, sc: dict) -> dict:
-    p = json.loads(json.dumps(params))
-    for key in ("intake_per_year", "annual_budget", "fixed_cost"):
+    p = dict(params)
+    for key in SCENARIO_ABSOLUTE:
         if key in sc:
             p[key] = sc[key]
-    for lvl, lv in p["levels"].items():
-        boost = sc.get("up_boost", 0) + (sc.get("valley_boost", 0) if 3 <= int(lvl) <= 5 else 0)
-        lv["p_up"] = min(1.0, lv["p_up"] * (1 + boost / 100))
-        lv["p_drop"] = min(1.0, lv["p_drop"] * (1 + sc.get("drop_change", 0) / 100))
-        total = lv["p_up"] + lv["p_drop"]
-        if total > 1:
-            lv["p_up"] /= total
-            lv["p_drop"] /= total
-    p["p_license"] = max(0.0, min(1.0, p["p_license"] + sc.get("p_license_change", 0) / 100))
+    p["price"] = max(0.0, p["price"] * (1 + sc.get("price_change", 0) / 100))
+    p["cac"] = max(0.01, p["cac"] * (1 + sc.get("cac_change", 0) / 100))
+    p["churn"] = min(1.0, max(0.0, p["churn"] * (1 + sc.get("churn_change", 0) / 100)))
     return p
 
 
 def normalize_hypothesis(raw: dict | None) -> dict:
     raw = raw if isinstance(raw, dict) else {}
-    metric = raw.get("metric") if raw.get("metric") in METRICS else "startups"
+    metric = raw.get("metric") if raw.get("metric") in METRICS else "survived"
     op = raw.get("op") if raw.get("op") in OPS else ">="
     return {
         "statement": _text(raw.get("statement"), 600),
@@ -190,57 +186,95 @@ def normalize_hypothesis(raw: dict | None) -> dict:
 # ---------------------------------------------------------------------------
 
 
+def _poisson(rng: random.Random, lam: float) -> int:
+    """Пуассоновская случайная величина: Кнут для малых λ, нормальное приближение — для больших."""
+    if lam <= 0:
+        return 0
+    if lam > 30:
+        return max(0, int(round(rng.gauss(lam, math.sqrt(lam)))))
+    limit, k, prod = math.exp(-lam), 0, rng.random()
+    while prod > limit:
+        k += 1
+        prod *= rng.random()
+    return k
+
+
+def _binomial(rng: random.Random, n: int, p: float) -> int:
+    if n <= 0 or p <= 0:
+        return 0
+    if p >= 1:
+        return n
+    if n > 60:
+        mean, sd = n * p, math.sqrt(n * p * (1 - p))
+        return min(n, max(0, int(round(rng.gauss(mean, sd)))))
+    return sum(1 for _ in range(n) if rng.random() < p)
+
+
+def _wobble(rng: random.Random, value: float, spread_pct: float) -> float:
+    """Значение с неопределённостью: логнормальный множитель, медиана — само значение."""
+    if spread_pct <= 0:
+        return value
+    return value * math.exp(rng.gauss(0, spread_pct / 100))
+
+
 def _one_run(p: dict, rng: random.Random) -> dict:
-    """Один прогон: помесячная точность не нужна — шаг год."""
-    projects = []  # [уровень, лет на уровне]
-    for lvl, count in p["initial"].items():
-        projects.extend([int(lvl), 0] for _ in range(count))
-    exit_level = p["exit_level"]
-    licenses = startups = 0
-    cost = income = investments = 0.0
-    yearly = []
-    for _year in range(p["horizon_years"]):
-        projects.extend([p["entry_level"], 0] for _ in range(p["intake_per_year"]))
-        if len(projects) > MAX_PROJECTS:
-            projects = projects[:MAX_PROJECTS]
-        demand = sum(p["levels"][str(lv)]["cost"] for lv, _ in projects)
-        budget = p["annual_budget"]
-        scale = 1.0 if not budget or demand <= budget else budget / demand
-        cost += min(demand, budget) if budget else demand
-        cost += p["fixed_cost"]
-        income += licenses * p["license_income"]  # доход от лицензий прошлых лет
-        survivors = []
-        for proj in projects:
-            lv = p["levels"][str(proj[0])]
-            r = rng.random()
-            if r < lv["p_up"] * scale:
-                proj[0] += 1
-                proj[1] = 0
-                if proj[0] >= exit_level:
-                    if rng.random() < p["p_license"]:
-                        licenses += 1
-                    else:
-                        startups += 1
-                        investments += p["investment_per_startup"]
-                    continue
-            elif r < lv["p_up"] * scale + lv["p_drop"]:
-                continue
-            else:
-                proj[1] += 1
-            survivors.append(proj)
-        projects = survivors
-        stale = sum(1 for _, yrs in projects if yrs >= p["stale_years"])
-        yearly.append({
-            "active": len(projects), "licenses": licenses, "startups": startups,
-            "exits": licenses + startups, "cost": cost, "income": income,
-            "investments": investments, "stale": stale,
-        })
-    levels = [0] * 9
-    for lv, _ in projects:
-        levels[lv - 1] += 1
-    final = dict(yearly[-1]) if yearly else {}
-    final["roi"] = (final.get("income", 0) + final.get("investments", 0)) / final["cost"] if final.get("cost") else 0.0
-    return {"yearly": yearly, "final": final, "levels": levels}
+    """Один прогон, шаг — месяц."""
+    cac = max(0.01, _wobble(rng, p["cac"], p["cac_spread"]))
+    churn = min(1.0, max(0.0, _wobble(rng, p["churn"], p["churn_spread"])))
+    grant_ok = rng.random() < p["grant_prob"]
+    round_ok = rng.random() < p["round_prob"]
+    customers = p["initial_customers"]
+    cash = p["start_cash"]
+    min_cash = cash
+    revenue = raised = 0.0
+    fixed = p["fixed_costs"]
+    alive = True
+    dead_month = None
+    breakeven = None
+    monthly = []
+    for month in range(1, p["horizon_months"] + 1):
+        if alive:
+            if month > p["sales_lag_months"]:
+                customers += _poisson(rng, p["marketing"] / cac)
+            customers -= _binomial(rng, customers, churn)
+            customers = min(customers, MAX_CUSTOMERS)
+            mrr = customers * p["price"]
+            gross = mrr * p["gross_margin"]
+            costs = fixed + p["marketing"]
+            if breakeven is None and gross >= costs and costs > 0:
+                breakeven = month
+            inflow = 0.0
+            if p["grant_amount"] and month == p["grant_month"] and grant_ok:
+                inflow += p["grant_amount"]
+            if p["round_amount"] and month == p["round_month"] and round_ok and mrr >= p["round_min_mrr"]:
+                inflow += p["round_amount"]
+            raised += inflow
+            revenue += mrr
+            cash += gross - costs + inflow
+            fixed *= 1 + p["fixed_growth"] / 100
+            min_cash = min(min_cash, cash)
+            if cash < 0:
+                alive = False
+                dead_month = month
+        else:
+            mrr = 0.0
+        monthly.append({"customers": customers if alive else 0, "mrr": mrr if alive else 0.0,
+                        "cash": cash, "alive": 1.0 if alive else 0.0})
+    final_mrr = monthly[-1]["mrr"] if monthly else 0.0
+    ltv = p["price"] * p["gross_margin"] / churn if churn > 0 else p["price"] * p["gross_margin"] * p["horizon_months"]
+    final = {
+        "survived": 1.0 if alive else 0.0,
+        "cash": cash,
+        "min_cash": min_cash,
+        "runway": float(dead_month - 1 if dead_month else p["horizon_months"]),
+        "customers": float(monthly[-1]["customers"] if monthly else 0),
+        "mrr": final_mrr,
+        "revenue": revenue,
+        "raised": raised,
+        "breakeven": float(breakeven or p["horizon_months"] + 1),
+        "ltv_cac": ltv / cac,
+    }
+    return {"monthly": monthly, "final": final}
 
 
 def _quantile(sorted_vals: list, q: float) -> float:
@@ -254,7 +288,7 @@ def _quantile(sorted_vals: list, q: float) -> float:
 def _stats(values: list) -> dict:
     s = sorted(values)
     mean = sum(s) / len(s) if s else 0.0
-    return {"mean": round(mean, 2), "p10": round(_quantile(s, 0.1), 2), "p90": round(_quantile(s, 0.9), 2)}
+    return {"mean": round(mean, 3), "p10": round(_quantile(s, 0.1), 3), "p90": round(_quantile(s, 0.9), 3)}
 
 
 def _check(value: float, hyp: dict) -> bool:
@@ -277,19 +311,15 @@ def simulate(params_raw: dict, scenarios_raw: list | None = None, hypothesis_raw
         p = apply_scenario(params, sc)
         rng = random.Random(params["seed"])  # одинаковые случайные числа — честное сравнение
         runs = [_one_run(p, rng) for _ in range(params["runs"])]
-        years = params["horizon_years"]
-        series = {
-            m: [_stats([r["yearly"][y][m] for r in runs]) for y in range(years)]
-            for m in ("active", "licenses", "startups", "exits", "cost", "income", "investments", "stale")
-        }
+        months = params["horizon_months"]
+        series = {m: [_stats([r["monthly"][t][m] for r in runs]) for t in range(months)] for m in SERIES}
         final = {m: _stats([r["final"].get(m, 0) for r in runs]) for m in METRICS}
-        level_mean = [round(sum(r["levels"][i] for r in runs) / len(runs), 2) for i in range(9)]
         hit = None
         if hyp["statement"] or hyp["value"]:
             hit = round(sum(1 for r in runs if _check(r["final"].get(hyp["metric"], 0), hyp)) / len(runs), 3)
         results.append({
             "id": sc["id"], "name": sc["name"], "description": sc["description"],
-            "series": series, "final": final, "levels": level_mean, "hypothesis_probability": hit,
+            "series": series, "final": final, "hypothesis_probability": hit,
         })
     return {
         "params": params,
@@ -307,17 +337,17 @@ def simulate(params_raw: dict, scenarios_raw: list | None = None, hypothesis_raw
 
 DEFAULT_PANEL = [
     {"id": "investor", "name": "Венчурный инвестор",
-     "persona": "партнёр посевного фонда; смотрит на команду, размер рынка, тракшн, права на технологию и долю вуза"},
-    {"id": "industry", "name": "Индустриальный партнёр",
-     "persona": "технический директор промышленной компании; важны применимость, сроки пилота, цена внедрения, риски для производства"},
+     "persona": "партнёр посевного фонда; смотрит на команду, размер рынка, тракшн, юнит-экономику, права на технологию и долю вуза в компании"},
+    {"id": "angel", "name": "Бизнес-ангел из отрасли",
+     "persona": "бывший топ-менеджер отраслевой компании, инвестирует свои деньги; важны понимание клиента, скорость продаж, первые деньги от клиентов"},
     {"id": "fund", "name": "Эксперт Фонда содействия инновациям",
-     "persona": "эксперт грантовых конкурсов; оценивает научно-техническую новизну, реалистичность плана, соответствие УГТ и требованиям программ"},
-    {"id": "tto", "name": "Руководитель ЦТТ",
-     "persona": "отвечает за РИД вуза; смотрит на охраноспособность, патентную чистоту, способ коммерциализации, нагрузку на команду ЦТТ"},
-    {"id": "student", "name": "Студент-основатель",
-     "persona": "студент старших курсов в акселераторе; важны понятность, время, деньги на старт, поддержка трекера, «Стартап как диплом»"},
-    {"id": "cfo", "name": "Финансовый директор вуза",
-     "persona": "проректор по экономике; важны затраты, окупаемость, риски для бюджета и отчётность по программе развития"},
+     "persona": "эксперт грантовых конкурсов; оценивает научно-техническую новизну, реалистичность плана и бюджета, команду и соответствие требованиям программы"},
+    {"id": "customer", "name": "Клиент — лицо, принимающее решение",
+     "persona": "руководитель службы в компании целевого сегмента; важны реальная боль, экономия денег или времени, риски внедрения, кто будет поддерживать решение"},
+    {"id": "cfo", "name": "Финансовый директор клиента",
+     "persona": "отвечает за бюджет компании-клиента; важны окупаемость, понятная цена, условия оплаты и договора, надёжность маленького поставщика"},
+    {"id": "tracker", "name": "Трекер акселератора",
+     "persona": "ведёт команды университетских стартапов; смотрит на скорость проверки гипотез, фокус на сегменте, распределение ролей в команде и следующую веху"},
 ]
 MAX_PANEL = 8
 VERDICTS = ("поддержать", "доработать", "отклонить")
@@ -341,9 +371,9 @@ def normalize_panel(raw) -> list:
 def panel_messages(role: dict, idea: str, context: str = "") -> list:
     system = (
         f"Ты — {role['name']} ({role['persona']}). Ты участвуешь в фокус-группе на платформе "
-        "управления инновациями университета и оцениваешь идею, гипотезу или проект офиса "
-        "проректора по инновациям. Отвечай строго от лица своей роли, по-русски, конкретно и "
-        "критично, без выдуманных фактов о вузе. Верни ТОЛЬКО JSON без пояснений вида "
+        "команды университетского технологического стартапа и оцениваешь идею, гипотезу, продукт "
+        "или питч стартапа. Отвечай строго от лица своей роли, по-русски, конкретно и "
+        "критично, без выдуманных фактов о стартапе и рынке. Верни ТОЛЬКО JSON без пояснений вида "
         '{"score": <целое 1-10>, "verdict": "поддержать|доработать|отклонить", '
         '"pros": ["..."], "cons": ["..."], "condition": "при каком условии поддержишь", '
         '"question": "главный вопрос к авторам"}. В pros и cons — по 2–3 коротких пункта.'
@@ -406,8 +436,9 @@ def results_context(sim: dict) -> str:
     for r in sim.get("results", []):
         f = r["final"]
         lines.append(
-            f"{r['name']}: стартапов {f['startups']['mean']:.1f}, лицензий {f['licenses']['mean']:.1f}, "
-            f"затраты {f['cost']['mean']:.0f} тыс. ₽, отдача {f['roi']['mean']:.2f} ₽ на 1 ₽"
+            f"{r['name']}: без кассового разрыва в {f['survived']['mean'] * 100:.0f} % прогонов, "
+            f"клиентов {f['customers']['mean']:.1f}, MRR {f['mrr']['mean']:.0f} тыс. ₽, "
+            f"деньги в конце {f['cash']['mean']:.0f} тыс. ₽"
             + (f", гипотеза подтверждается в {r['hypothesis_probability'] * 100:.0f} % прогонов"
                if r.get("hypothesis_probability") is not None else "")
         )

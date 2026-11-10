@@ -178,7 +178,7 @@
       .then(function (text) {
         fill(parseTemplate(text));
         baseSelect.value = t.id;
-        setStatus('Шаблон «' + t.name + '» загружен — впишите особенности своего вуза.');
+        setStatus('Шаблон «' + t.name + '» загружен — впишите особенности своего стартапа.');
       })
       .catch(function () {
         setStatus('Не удалось загрузить шаблон. Проверьте, что платформа запущена через сервер.', true);
@@ -281,7 +281,7 @@
       detail: {
         skill_id: 'agent-builder',
         name: 'Конструктор агентов',
-        prompt: 'Помоги доработать агента для управления инновациями в нашем университете. Вот мой черновик:\n\n' + buildMarkdown(values())
+        prompt: 'Помоги доработать агента для нашего стартапа. Вот мой черновик:\n\n' + buildMarkdown(values())
       }
     }));
   });

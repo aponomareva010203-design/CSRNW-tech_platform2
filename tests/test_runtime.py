@@ -52,7 +52,7 @@ def test_build_system_prompt_from_files():
     base = build_system_prompt()
     assert "Рабочего пространства" in base
 
-    with_skill = build_system_prompt(skill_ids=["portfolio-analyst"])
+    with_skill = build_system_prompt(skill_ids=["hypothesis-tester"])
     assert "Навык:" in with_skill
     assert len(with_skill) > len(base)
 
@@ -179,13 +179,13 @@ def test_onboarding_skill_body_fits_limit():
 
 
 def test_template_skill_bodies_fit_limit():
-    """Шаблоны агентов проректора читаются целиком и попадают в промпт."""
+    """Шаблоны агентов команды стартапа читаются целиком и попадают в промпт."""
     from api.runtime import datarepo
     from api.runtime.prompts import SKILL_BODY_LIMIT, build_system_prompt
 
-    for skill_id, name in (("portfolio-analyst", "Портфельный аналитик"),
-                           ("ecosystem-analyst", "Аналитик экосистемы"),
-                           ("venture-builder", "Венчурный билдер")):
+    for skill_id, name in (("hypothesis-tester", "Проверка гипотез"),
+                           ("market-analyst", "Аналитик рынка"),
+                           ("unit-economist", "Юнит-экономист")):
         skill = datarepo.get_skill(skill_id)
         assert skill, f"навык {skill_id} должен быть в data/skills.json"
         body = datarepo.skill_body(skill, limit=SKILL_BODY_LIMIT)
@@ -456,16 +456,16 @@ def test_skill_launch_starts_new_session(tmp_path, monkeypatch):
     )
     assert session_id_of(resp.text) == first_sid
 
-    # 3) запрос другого навыка («Портфельный аналитик») — автоматом новая сессия
+    # 3) запрос другого навыка («Проверка гипотез») — автоматом новая сессия
     resp = client.post(
         "/api/chat",
-        json={"message": "запусти портфельного аналитика", "session_id": first_sid,
-              "skill_ids": ["portfolio-analyst"]},
+        json={"message": "запусти проверку гипотез", "session_id": first_sid,
+              "skill_ids": ["hypothesis-tester"]},
     )
     sid3 = session_id_of(resp.text)
     assert sid3 != first_sid
     new_session = client.get(f"/api/sessions/{sid3}").json()
-    assert new_session["skill_ids"] == ["portfolio-analyst"]
+    assert new_session["skill_ids"] == ["hypothesis-tester"]
     # пайплайн пошёл с первого шага: в новой сессии только это сообщение
     assert [m["role"] for m in new_session["messages"]] == ["user", "assistant"]
     # старая сессия не тронута

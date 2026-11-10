@@ -1,32 +1,44 @@
 /* ============================================================
-   «Рабочий стол проректора по инновациям» (index.html).
+   «Рабочий стол стартапа» (index.html).
 
-   Данные — data/dashboard.json (тестовые данные вуза). Участник
-   сессии меняет их под свой университет двумя способами:
+   Данные — data/dashboard.json (демо-данные стартапа «ВиброСенс»).
+   Команда меняет их под свой стартап двумя способами:
      1) правит data/dashboard.json в репозитории (видят все);
      2) кнопкой «Загрузить свои данные» подставляет свой JSON той же
         структуры — он хранится только в этом браузере (localStorage).
 
    Виджеты:
-     - Патенты и РИД: количество, перспективность, затраты на поддержку;
-     - Портфель по УГТ: столбцы 1–9, правило «на одном уровне
-       stale_years лет и дольше → красный, кандидат на закрытие»;
-     - Цепочка финансирования: РНФ → Гранты → Стартап-студия → Венчур;
-     - Стартап-коллективы: грантовые / внутренние / госзадание;
-     - Венчурный билдер: трекер обязательств стартапов.
+     - Доска гипотез: бэклог → проверяется → подтверждена / опровергнута,
+       фильтр по типу гипотезы (проблема, сегмент, ценность, цена, канал, рост);
+     - Воронка CustDev и продаж: контакты → интервью → … → платящие клиенты,
+       конверсия между шагами, «узкое место» подсвечивается;
+     - Размер рынка: TAM / SAM / SOM и сегменты;
+     - Юнит-экономика: LTV, CAC, LTV/CAC, срок окупаемости CAC;
+     - Деньги и runway: выручка и расходы по месяцам (факт / план),
+       остаток денег и месяц, когда они закончатся;
+     - Конкуренты и альтернативы; команда и доли;
+     - Вехи (контрольные точки) со статусами.
    ============================================================ */
 
 (function () {
   var DATA_URL = '/data/dashboard.json';
-  var LOCAL_KEY = 'aios-dashboard-data-v1';
+  var LOCAL_KEY = 'aios-startup-dashboard-v1';
 
-  var PERSPECTIVE = { high: 'Высокая', low: 'Низкая' };
-  var TEAM_FUNDING = [
-    { key: 'grant', title: 'Грантовые' },
-    { key: 'internal', title: 'Внутреннее финансирование' },
-    { key: 'state', title: 'Госзадание' }
+  var HYP_TYPES = {
+    problem: 'Проблема',
+    segment: 'Сегмент',
+    value: 'Ценность',
+    price: 'Цена',
+    channel: 'Канал',
+    growth: 'Рост'
+  };
+  var HYP_STATUS = [
+    { key: 'backlog', title: 'Бэклог', pill: 'done' },
+    { key: 'testing', title: 'Проверяется', pill: 'warn' },
+    { key: 'confirmed', title: 'Подтверждена', pill: 'ok' },
+    { key: 'refuted', title: 'Опровергнута', pill: 'bad' }
   ];
-  var VENTURE_STATUS = {
+  var MS_STATUS = {
     on_track: 'В графике',
     risk: 'Риск',
     overdue: 'Просрочено',
@@ -36,12 +48,9 @@
   var state = {
     data: null,
     source: 'demo',
-    patentFilter: 'all',
-    trlFilter: null,
-    staleOnly: false,
-    fundingStage: null,
-    teamFilter: null,
-    ventureFilter: 'all'
+    hypType: 'all',
+    funnelStep: null,
+    msFilter: 'all'
   };
 
   /* ---------- утилиты ---------- */
@@ -54,13 +63,21 @@
     });
   }
 
+  /* суммы в данных — тыс. ₽ */
   function money(thousands) {
     var n = Number(thousands) || 0;
-    if (n >= 1000) return (n / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 1 }) + ' млн ₽';
-    return n.toLocaleString('ru-RU') + ' тыс. ₽';
+    var a = Math.abs(n);
+    if (a >= 1000000) return (n / 1000000).toLocaleString('ru-RU', { maximumFractionDigits: 1 }) + ' млрд ₽';
+    if (a >= 1000) return (n / 1000).toLocaleString('ru-RU', { maximumFractionDigits: 1 }) + ' млн ₽';
+    return n.toLocaleString('ru-RU', { maximumFractionDigits: 1 }) + ' тыс. ₽';
+  }
+
+  function num(v, digits) {
+    return (Number(v) || 0).toLocaleString('ru-RU', { maximumFractionDigits: digits == null ? 1 : digits });
   }
 
   function plural(n, one, few, many) {
+    n = Math.abs(Math.floor(n));
     var m10 = n % 10, m100 = n % 100;
     if (m10 === 1 && m100 !== 11) return one;
     if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few;
@@ -73,37 +90,90 @@
     return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
   }
 
+  function fmtMonth(ym) {
+    var d = new Date(String(ym) + '-01');
+    if (isNaN(d)) return esc(ym);
+    return d.toLocaleDateString('ru-RU', { month: 'short' }).replace('.', '') + ' ' + String(d.getFullYear()).slice(2);
+  }
+
   function today() {
     var asOf = state.data && state.data.as_of ? new Date(state.data.as_of) : null;
     return asOf && !isNaN(asOf) ? asOf : new Date();
   }
 
-  /* Сколько лет проект стоит на текущем УГТ */
-  function yearsOnLevel(p) {
-    var since = new Date(p.trl_since);
-    if (isNaN(since)) return 0;
-    return (today() - since) / (365.25 * 24 * 3600 * 1000);
+  function arr(key) {
+    var v = state.data && state.data[key];
+    return Array.isArray(v) ? v : [];
   }
 
-  function staleYears() {
-    var n = Number(state.data && state.data.stale_years);
-    return n > 0 ? n : 2;
+  function obj(key) {
+    var v = state.data && state.data[key];
+    return v && typeof v === 'object' && !Array.isArray(v) ? v : {};
   }
 
-  function isStale(p) { return yearsOnLevel(p) >= staleYears(); }
-
-  /* Статус обязательства: явный из данных, иначе — по прогрессу и сроку */
-  function ventureStatus(row) {
-    if (row.status && VENTURE_STATUS[row.status]) return row.status;
+  /* Статус вехи: явный из данных, иначе — по прогрессу и сроку */
+  function msStatus(row) {
     if ((Number(row.progress) || 0) >= 100) return 'done';
+    if (row.status && MS_STATUS[row.status] && row.status !== 'done') {
+      var d0 = new Date(row.due);
+      if (!isNaN(d0) && d0 < today()) return 'overdue';
+      return row.status;
+    }
     var due = new Date(row.due);
     if (!isNaN(due) && due < today()) return 'overdue';
     return (Number(row.progress) || 0) < 30 ? 'risk' : 'on_track';
   }
 
-  function arr(key) {
-    var v = state.data && state.data[key];
-    return Array.isArray(v) ? v : [];
+  /* ---------- расчёты ---------- */
+
+  /* Юнит-экономика: всё в тыс. ₽ */
+  function unitEconomics() {
+    var u = obj('unit_economics');
+    var arpa = (Number(u.price_month) || 0) * (Number(u.units_per_customer) || 1); // выручка с клиента в месяц
+    var gm = Math.max(0, Math.min(1, Number(u.gross_margin) || 0));
+    var margin = arpa * gm;                                        // маржа с клиента в месяц
+    var life = Number(u.lifetime_months) || 0;
+    var cac = Number(u.cac) || 0;
+    var ltv = margin * life;
+    return {
+      arpa: arpa,
+      margin: margin,
+      ltv: ltv,
+      cac: cac,
+      ratio: cac ? ltv / cac : 0,
+      payback: margin ? cac / margin : Infinity,
+      model: u.model || '',
+      note: u.note || ''
+    };
+  }
+
+  /* Runway: остаток денег, движение по месяцам после даты остатка */
+  function runway() {
+    var cash = obj('cash');
+    var balance = Number(cash.balance) || 0;
+    var since = String(cash.balance_date || '').slice(0, 7);
+    var flows = arr('cashflow');
+    var future = flows.filter(function (f) { return !since || String(f.month) >= since; });
+    var past = flows.filter(function (f) { return f.fact; }).slice(-3);
+    var burn = past.length
+      ? past.reduce(function (s, f) { return s + (Number(f.costs) || 0) - (Number(f.revenue) || 0); }, 0) / past.length
+      : 0;
+    var left = balance;
+    var zeroMonth = null;
+    var series = [];
+    future.forEach(function (f) {
+      left += (Number(f.revenue) || 0) - (Number(f.costs) || 0);
+      series.push({ month: f.month, balance: left });
+      if (left < 0 && !zeroMonth) zeroMonth = f.month;
+    });
+    return {
+      balance: balance,
+      burn: burn,
+      months: burn > 0 ? balance / burn : Infinity,
+      zeroMonth: zeroMonth,
+      series: series,
+      note: cash.note || ''
+    };
   }
 
   /* ---------- тултип ---------- */
@@ -127,23 +197,24 @@
   /* ---------- KPI ---------- */
 
   function renderKpi() {
-    var patents = arr('patents');
-    var projects = arr('projects');
-    var teams = arr('teams');
-    var high = patents.filter(function (p) { return p.perspective === 'high'; }).length;
-    var cost = patents.reduce(function (s, p) { return s + (Number(p.support_cost) || 0); }, 0);
-    var lowCost = patents.filter(function (p) { return p.perspective === 'low'; })
-      .reduce(function (s, p) { return s + (Number(p.support_cost) || 0); }, 0);
-    var stale = projects.filter(isStale).length;
-    var overdue = arr('venture_tracker').filter(function (r) { return ventureStatus(r) === 'overdue'; }).length;
+    var hyps = arr('hypotheses');
+    var confirmed = hyps.filter(function (h) { return h.status === 'confirmed'; }).length;
+    var refuted = hyps.filter(function (h) { return h.status === 'refuted'; }).length;
+    var r = obj('readiness');
+    var funnel = arr('funnel');
+    var interviews = funnel.filter(function (f) { return f.key === 'interviews'; })[0];
+    var paid = funnel.filter(function (f) { return f.key === 'paid'; })[0];
+    var ue = unitEconomics();
+    var rw = runway();
+    var overdue = arr('milestones').filter(function (m) { return msStatus(m) === 'overdue'; }).length;
 
     var tiles = [
-      { label: 'Патенты и РИД', value: patents.length, note: high + ' с высокой перспективностью' },
-      { label: 'Затраты на поддержку РИД', value: money(cost), note: 'из них ' + money(lowCost) + ' — низкая перспективность' },
-      { label: 'Проекты в портфеле', value: projects.length, note: 'средний УГТ ' + avgTrl(projects) },
-      { label: 'Кандидаты на закрытие', value: stale, note: 'на одном УГТ ' + staleYears() + ' ' + plural(staleYears(), 'год', 'года', 'лет') + ' и дольше', alert: stale > 0 },
-      { label: 'Стартап-коллективы', value: teams.length, note: teams.reduce(function (s, t) { return s + (Number(t.members) || 0); }, 0) + ' человек в командах' },
-      { label: 'Просроченные обязательства', value: overdue, note: 'по трекеру венчурного билдера', alert: overdue > 0 }
+      { label: 'Готовность', value: 'УГТ ' + (r.trl || '—'), note: 'IRL ' + (r.irl || '—') + ' · CRL ' + (r.crl || '—') },
+      { label: 'Гипотезы подтверждены', value: confirmed + ' из ' + hyps.length, note: refuted + ' ' + plural(refuted, 'опровергнута', 'опровергнуты', 'опровергнуто') + ' — это тоже результат' },
+      { label: 'Интервью с клиентами', value: interviews ? num(interviews.value, 0) : '—', note: paid ? num(paid.value, 0) + ' ' + plural(paid.value, 'платящий клиент', 'платящих клиента', 'платящих клиентов') : 'нет данных о продажах', alert: interviews && interviews.value < 20 },
+      { label: 'LTV / CAC', value: ue.cac ? num(ue.ratio, 1) : '—', note: ue.ratio >= 3 ? 'здоровая экономика (≥ 3)' : 'ниже ориентира 3', alert: ue.cac && ue.ratio < 3 },
+      { label: 'Runway', value: isFinite(rw.months) ? num(rw.months, 1) + ' мес.' : '∞', note: 'при среднем burn ' + money(rw.burn) + '/мес.', alert: rw.months < 6 },
+      { label: 'Просроченные вехи', value: overdue, note: 'контрольные точки команды', alert: overdue > 0 }
     ];
     el('kpiRow').innerHTML = tiles.map(function (t) {
       return '<div class="kpi' + (t.alert ? ' kpi--alert' : '') + '">' +
@@ -153,232 +224,226 @@
     }).join('');
   }
 
-  function avgTrl(projects) {
-    if (!projects.length) return '—';
-    var s = projects.reduce(function (a, p) { return a + (Number(p.trl) || 0); }, 0);
-    return (s / projects.length).toLocaleString('ru-RU', { maximumFractionDigits: 1 });
+  /* ---------- Доска гипотез ---------- */
+
+  function renderHypotheses() {
+    var hyps = arr('hypotheses').filter(function (h) {
+      return state.hypType === 'all' || h.type === state.hypType;
+    });
+    el('hypBoard').innerHTML = HYP_STATUS.map(function (st) {
+      var list = hyps.filter(function (h) { return (h.status || 'backlog') === st.key; });
+      return '<div class="hyp-col hyp-col--' + st.key + '">' +
+        '<div class="hyp-col-head"><span>' + esc(st.title) + '</span><b>' + list.length + '</b></div>' +
+        list.map(function (h) {
+          return '<div class="hyp-card">' +
+            '<div class="hyp-card-top"><span class="pill pill--' + st.pill + '">' + esc(HYP_TYPES[h.type] || h.type || 'Гипотеза') + '</span>' +
+            '<span class="cell-sub">' + esc(h.id || '') + (h.due ? ' · до ' + fmtDate(h.due) : '') + '</span></div>' +
+            '<div class="hyp-text">' + esc(h.statement) + '</div>' +
+            (h.criterion ? '<div class="hyp-meta"><b>Критерий:</b> ' + esc(h.criterion) + '</div>' : '') +
+            (h.method ? '<div class="hyp-meta"><b>Как проверяем:</b> ' + esc(h.method) + '</div>' : '') +
+            (h.evidence ? '<div class="hyp-meta hyp-evidence"><b>Факт:</b> ' + esc(h.evidence) + '</div>' : '') +
+            (h.owner ? '<div class="cell-sub">' + esc(h.owner) + '</div>' : '') +
+            '</div>';
+        }).join('') +
+        (list.length ? '' : '<div class="hyp-empty">—</div>') +
+        '</div>';
+    }).join('');
   }
 
-  /* ---------- Патенты и РИД ---------- */
+  /* ---------- Воронка CustDev и продаж ---------- */
 
-  function renderPatents() {
-    var patents = arr('patents');
-    var high = patents.filter(function (p) { return p.perspective === 'high'; });
-    var low = patents.filter(function (p) { return p.perspective === 'low'; });
-    var sum = function (list) { return list.reduce(function (s, p) { return s + (Number(p.support_cost) || 0); }, 0); };
-    var total = patents.length || 1;
-
-    el('patentsSplit').innerHTML =
-      '<div class="split-track">' +
-        '<div class="split-seg split-seg--high" style="flex:' + high.length + '" data-tip="high"></div>' +
-        '<div class="split-seg split-seg--low" style="flex:' + low.length + '" data-tip="low"></div>' +
-      '</div>' +
-      '<div class="split-labels">' +
-        '<span><i class="sw sw--high"></i>Высокая: <b>' + high.length + '</b> (' + Math.round(high.length / total * 100) + '%) · ' + money(sum(high)) + '/год</span>' +
-        '<span><i class="sw sw--low"></i>Низкая: <b>' + low.length + '</b> (' + Math.round(low.length / total * 100) + '%) · ' + money(sum(low)) + '/год</span>' +
-      '</div>';
-
-    el('patentsSplit').querySelectorAll('.split-seg').forEach(function (seg) {
-      var key = seg.getAttribute('data-tip');
-      var list = key === 'high' ? high : low;
-      seg.addEventListener('mousemove', function (e) {
-        showTip(e, '<b>' + PERSPECTIVE[key] + ' перспективность</b><br>' + list.length + ' РИД · ' + money(sum(list)) + ' в год');
-      });
-      seg.addEventListener('mouseleave', hideTip);
-      seg.addEventListener('click', function () { setChip('patents', key); });
+  function renderFunnel() {
+    var steps = arr('funnel');
+    var worst = null;
+    steps.forEach(function (s, i) {
+      if (i === 0) return;
+      var prev = Number(steps[i - 1].value) || 0;
+      var conv = prev ? (Number(s.value) || 0) / prev : 0;
+      if (worst === null || conv < worst.conv) worst = { i: i, conv: conv };
     });
 
-    var rows = patents.filter(function (p) {
-      return state.patentFilter === 'all' || p.perspective === state.patentFilter;
-    }).sort(function (a, b) { return (b.support_cost || 0) - (a.support_cost || 0); });
+    el('custdevFunnel').innerHTML = steps.map(function (s, i) {
+      var prev = i > 0 ? Number(steps[i - 1].value) || 0 : 0;
+      var conv = i > 0 && prev ? Math.round((Number(s.value) || 0) / prev * 100) : null;
+      var bottleneck = worst && worst.i === i;
+      return (i > 0 ? '<div class="funnel-arrow' + (bottleneck ? ' funnel-arrow--bad' : '') + '" aria-hidden="true"><span>' + (conv == null ? '—' : conv + '%') + '</span></div>' : '') +
+        '<button type="button" class="funnel-step' + (state.funnelStep === s.key ? ' is-active' : '') + '" data-step="' + esc(s.key) + '">' +
+          '<span class="funnel-n">' + (i + 1) + '</span>' +
+          '<span class="funnel-title">' + esc(s.title) + '</span>' +
+          '<span class="funnel-value">' + num(s.value, 0) + '</span>' +
+          '<span class="funnel-sub">' + esc(s.subtitle || '') + '</span>' +
+        '</button>';
+    }).join('');
 
-    el('patentsTable').innerHTML =
-      '<thead><tr><th>РИД</th><th>Тип / год</th><th>Перспективность</th><th class="num">Поддержка, в год</th></tr></thead><tbody>' +
-      rows.map(function (p) {
-        return '<tr><td><div class="cell-title">' + esc(p.title) + '</div><div class="cell-sub">' + esc(p.id) + ' · ' + esc(p.department) +
-          (p.licensee ? ' · лицензиат: ' + esc(p.licensee) : '') + '</div></td>' +
-          '<td>' + esc(p.type) + '<div class="cell-sub">' + esc(p.year) + '</div></td>' +
-          '<td><span class="pill pill--' + (p.perspective === 'high' ? 'ok' : 'warn') + '">' + esc(PERSPECTIVE[p.perspective] || '—') + '</span></td>' +
-          '<td class="num">' + money(p.support_cost) + '</td></tr>';
+    el('custdevFunnel').querySelectorAll('.funnel-step').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var key = btn.getAttribute('data-step');
+        state.funnelStep = state.funnelStep === key ? null : key;
+        renderFunnel();
+      });
+    });
+
+    var detail = el('funnelDetail');
+    var first = steps[0], last = steps[steps.length - 1];
+    var total = first && last && Number(first.value) ? (Number(last.value) || 0) / Number(first.value) * 100 : 0;
+    var text = 'Процент над стрелкой — конверсия в следующий шаг. Сквозная конверсия: <b>' + num(total, 1) + ' %</b>.';
+    if (worst && steps[worst.i]) {
+      text += ' Узкое место — переход «' + esc(steps[worst.i - 1].title) + ' → ' + esc(steps[worst.i].title) +
+        '» (' + Math.round(worst.conv * 100) + ' %): с него и начните следующий эксперимент.';
+    }
+    detail.innerHTML = '<p class="widget-sub">' + text + '</p>';
+  }
+
+  /* ---------- Размер рынка ---------- */
+
+  function renderMarket() {
+    var m = obj('market');
+    var levels = ['tam', 'sam', 'som'].map(function (k) { return { key: k, d: m[k] || {} }; });
+    var max = Math.max.apply(null, levels.map(function (l) { return Number(l.d.value) || 0; }).concat([1]));
+    var unit = m.unit || 'тыс. ₽ в год';
+    el('marketBars').innerHTML = levels.map(function (l) {
+      var v = Number(l.d.value) || 0;
+      /* логарифмическая шкала: SOM обычно в сотни раз меньше TAM */
+      var w = v > 0 ? Math.max(4, Math.log10(1 + v) / Math.log10(1 + max) * 100) : 0;
+      return '<div class="mkt-row" data-key="' + l.key + '">' +
+        '<div class="mkt-label"><b>' + esc(l.d.label || l.key.toUpperCase()) + '</b><span>' + money(v) + '</span></div>' +
+        '<div class="mkt-track"><span class="mkt-bar mkt-bar--' + l.key + '" style="width:' + w + '%"></span></div>' +
+        '<div class="cell-sub">' + esc(l.d.method || '') + '</div></div>';
+    }).join('') +
+      '<p class="cell-sub">Единицы: ' + esc(unit) + '. Длина полос — в логарифмической шкале. SOM/SAM = ' +
+      (Number((m.sam || {}).value) ? num((Number((m.som || {}).value) || 0) / Number(m.sam.value) * 100, 1) : '—') + ' %.</p>';
+
+    var segs = Array.isArray(m.segments) ? m.segments : [];
+    el('segmentsTable').innerHTML =
+      '<thead><tr><th>Сегмент</th><th class="num">Компаний</th><th class="num">Чек в год</th><th class="num">Ёмкость</th></tr></thead><tbody>' +
+      segs.map(function (s) {
+        var cap = (Number(s.companies) || 0) * (Number(s.check) || 0);
+        return '<tr><td><div class="cell-title">' + esc(s.name) + '</div>' +
+          (s.priority === 'high' ? '<span class="pill pill--ok">приоритет</span>' : '') + '</td>' +
+          '<td class="num">' + num(s.companies, 0) + '</td>' +
+          '<td class="num">' + money(s.check) + '</td>' +
+          '<td class="num">' + money(cap) + '</td></tr>';
       }).join('') +
-      (rows.length ? '' : '<tr><td colspan="4" class="empty">Нет РИД по выбранному фильтру</td></tr>') +
+      (segs.length ? '' : '<tr><td colspan="4" class="empty">Добавьте сегменты в data/dashboard.json → market.segments</td></tr>') +
       '</tbody>';
   }
 
-  /* ---------- Портфель по УГТ ---------- */
+  /* ---------- Юнит-экономика ---------- */
 
-  function renderTrl() {
-    var projects = arr('projects');
-    el('staleYears').textContent = staleYears();
-    var levels = [];
-    for (var i = 1; i <= 9; i++) {
-      var on = projects.filter(function (p) { return Number(p.trl) === i; });
-      levels.push({ trl: i, ok: on.filter(function (p) { return !isStale(p); }).length, stale: on.filter(isStale).length });
-    }
-    var max = Math.max.apply(null, levels.map(function (l) { return l.ok + l.stale; }).concat([1]));
+  function renderEconomics() {
+    var u = unitEconomics();
+    var cells = [
+      ['Выручка с клиента', money(u.arpa) + '/мес.', 'ARPA'],
+      ['Маржа с клиента', money(u.margin) + '/мес.', 'ARPA × валовая маржа'],
+      ['LTV', money(u.ltv), 'маржа × срок жизни клиента'],
+      ['CAC', money(u.cac), 'стоимость привлечения клиента'],
+      ['LTV / CAC', u.cac ? num(u.ratio, 1) : '—', 'ориентир — 3 и выше'],
+      ['Окупаемость CAC', isFinite(u.payback) ? num(u.payback, 1) + ' мес.' : '—', 'ориентир — до 12 мес.']
+    ];
+    el('ueGrid').innerHTML = cells.map(function (c, i) {
+      var bad = (i === 4 && u.cac && u.ratio < 3) || (i === 5 && u.payback > 12);
+      return '<div class="ue-cell' + (bad ? ' ue-cell--bad' : '') + '"><span class="ue-label">' + esc(c[0]) + '</span>' +
+        '<span class="ue-value">' + esc(c[1]) + '</span><span class="cell-sub">' + esc(c[2]) + '</span></div>';
+    }).join('');
+    var verdict;
+    if (!u.cac || !u.arpa) verdict = 'Заполните unit_economics в data/dashboard.json, чтобы увидеть расчёт.';
+    else if (u.ratio >= 3 && u.payback <= 12) verdict = 'Экономика сходится: можно вкладываться в каналы привлечения. Проверьте, что маржа и срок жизни подтверждены фактом, а не гипотезой.';
+    else if (u.ratio >= 1) verdict = 'Клиент окупается, но медленно. Рычаги: цена (гипотеза H-04), рост числа агрегатов на клиента, дешёвый канал (H-05).';
+    else verdict = 'Каждый новый клиент приносит убыток: пересмотрите цену, себестоимость или канал до масштабирования.';
+    el('ueVerdict').innerHTML = '<p class="widget-sub"><b>' + esc(u.model) + '.</b> ' + esc(verdict) + (u.note ? ' <i>' + esc(u.note) + '</i>' : '') + '</p>';
+  }
 
-    el('trlChart').innerHTML = levels.map(function (l) {
-      var total = l.ok + l.stale;
-      var active = state.trlFilter === l.trl;
-      return '<button type="button" class="trl-col' + (active ? ' is-active' : '') + (state.trlFilter && !active ? ' is-dim' : '') + '" data-trl="' + l.trl + '" aria-label="УГТ ' + l.trl + ': ' + total + ' проектов">' +
-        '<span class="trl-count">' + (total || '') + '</span>' +
-        '<span class="trl-bar" style="height:' + (total / max * 100) + '%">' +
-          (l.stale ? '<span class="trl-seg trl-seg--stale" style="flex:' + l.stale + '"></span>' : '') +
-          (l.ok ? '<span class="trl-seg trl-seg--ok" style="flex:' + l.ok + '"></span>' : '') +
-        '</span>' +
-        '<span class="trl-label">УГТ ' + l.trl + '</span></button>';
+  /* ---------- Деньги и runway ---------- */
+
+  function renderCash() {
+    var flows = arr('cashflow');
+    var rw = runway();
+    var max = Math.max.apply(null, flows.map(function (f) { return Math.max(Number(f.revenue) || 0, Number(f.costs) || 0); }).concat([1]));
+    var balances = {};
+    rw.series.forEach(function (s) { balances[s.month] = s.balance; });
+
+    el('cashChart').innerHTML = flows.map(function (f) {
+      var rev = Number(f.revenue) || 0, cost = Number(f.costs) || 0;
+      var bal = balances[f.month];
+      return '<div class="cash-col' + (f.fact ? '' : ' cash-col--plan') + (rw.zeroMonth === f.month ? ' cash-col--zero' : '') + '" data-month="' + esc(f.month) + '">' +
+        '<div class="cash-bars">' +
+          '<span class="cash-bar cash-bar--rev" style="height:' + (rev / max * 100) + '%"></span>' +
+          '<span class="cash-bar cash-bar--cost" style="height:' + (cost / max * 100) + '%"></span>' +
+        '</div>' +
+        '<span class="cash-label">' + fmtMonth(f.month) + '</span>' +
+        (bal != null ? '<span class="cash-bal' + (bal < 0 ? ' is-neg' : '') + '">' + num(bal / 1000, 1) + '</span>' : '<span class="cash-bal"></span>') +
+        '</div>';
     }).join('');
 
-    el('trlChart').querySelectorAll('.trl-col').forEach(function (col) {
-      var lvl = Number(col.getAttribute('data-trl'));
-      var l = levels[lvl - 1];
+    el('cashChart').querySelectorAll('.cash-col').forEach(function (col) {
+      var f = flows.filter(function (x) { return x.month === col.getAttribute('data-month'); })[0];
       col.addEventListener('mousemove', function (e) {
-        showTip(e, '<b>УГТ ' + lvl + '</b><br>В развитии: ' + l.ok + '<br>Кандидаты на закрытие: ' + l.stale);
+        var bal = balances[f.month];
+        showTip(e, '<b>' + fmtMonth(f.month) + (f.fact ? ' · факт' : ' · план') + '</b><br>Выручка: ' + money(f.revenue) +
+          '<br>Расходы: ' + money(f.costs) + '<br>Результат: ' + money((Number(f.revenue) || 0) - (Number(f.costs) || 0)) +
+          (bal != null ? '<br>Остаток денег: ' + money(bal) : ''));
       });
       col.addEventListener('mouseleave', hideTip);
-      col.addEventListener('click', function () {
-        state.trlFilter = state.trlFilter === lvl ? null : lvl;
-        renderTrl();
-      });
     });
 
-    el('trlHint').textContent = state.trlFilter
-      ? 'Фильтр: УГТ ' + state.trlFilter + ' — нажмите на столбец ещё раз, чтобы сбросить'
-      : 'Нажмите на столбец, чтобы отфильтровать таблицу';
+    var msg;
+    if (rw.zeroMonth) msg = '<b class="txt-bad">По плану деньги закончатся в ' + fmtMonth(rw.zeroMonth) + '.</b> Начинайте привлечение за 6 месяцев до этой даты.';
+    else if (rw.series.length) msg = 'По плану деньги не заканчиваются до ' + fmtMonth(rw.series[rw.series.length - 1].month) + ' (остаток ' + money(rw.series[rw.series.length - 1].balance) + ').';
+    else msg = 'Добавьте cash.balance и cashflow в data/dashboard.json.';
+    el('cashNote').innerHTML = '<p class="widget-sub">Остаток на ' + fmtDate(obj('cash').balance_date) + ': <b>' + money(rw.balance) + '</b>. ' + msg +
+      (rw.note ? ' <i>' + esc(rw.note) + '</i>' : '') + '</p>';
+  }
 
-    var rows = projects.filter(function (p) {
-      if (state.trlFilter && Number(p.trl) !== state.trlFilter) return false;
-      if (state.staleOnly && !isStale(p)) return false;
-      return true;
-    }).sort(function (a, b) { return yearsOnLevel(b) - yearsOnLevel(a); });
+  /* ---------- Конкуренты ---------- */
 
-    var stages = stageTitles();
-    el('projectsTable').innerHTML =
-      '<thead><tr><th>Проект</th><th class="num">УГТ</th><th>На уровне</th><th>Стадия финансирования</th><th class="num">Бюджет</th></tr></thead><tbody>' +
-      rows.map(function (p) {
-        var y = yearsOnLevel(p);
-        var stale = isStale(p);
-        return '<tr class="' + (stale ? 'row-stale' : '') + '"><td><div class="cell-title">' + esc(p.title) + '</div><div class="cell-sub">' + esc(p.id) + ' · ' + esc(p.department) + '</div></td>' +
-          '<td class="num"><b>' + esc(p.trl) + '</b></td>' +
-          '<td>' + y.toLocaleString('ru-RU', { maximumFractionDigits: 1 }) + ' ' + plural(Math.floor(y), 'год', 'года', 'лет') +
-            '<div class="cell-sub">с ' + fmtDate(p.trl_since) + '</div>' +
-            (stale ? '<span class="pill pill--bad">⚠ кандидат на закрытие</span>' : '') + '</td>' +
-          '<td>' + esc(stages[p.funding_stage] || '—') + '</td>' +
-          '<td class="num">' + money(p.budget) + '</td></tr>';
+  function renderCompetitors() {
+    var rows = arr('competitors');
+    el('competitorsTable').innerHTML =
+      '<thead><tr><th>Решение</th><th>Цена</th><th>Сильная сторона</th><th>Слабая сторона</th></tr></thead><tbody>' +
+      rows.map(function (c) {
+        return '<tr><td><div class="cell-title">' + esc(c.name) + '</div><div class="cell-sub">' + esc(c.type || '') + '</div></td>' +
+          '<td>' + esc(c.price || '—') + '</td><td>' + esc(c.strength || '—') + '</td><td>' + esc(c.weakness || '—') + '</td></tr>';
       }).join('') +
-      (rows.length ? '' : '<tr><td colspan="5" class="empty">Нет проектов по выбранному фильтру</td></tr>') +
+      (rows.length ? '' : '<tr><td colspan="4" class="empty">Нет данных о конкурентах</td></tr>') +
       '</tbody>';
   }
 
-  function stageTitles() {
-    var map = {};
-    arr('funding_stages').forEach(function (s) { map[s.key] = s.title; });
-    return map;
+  /* ---------- Команда и доли ---------- */
+
+  function renderTeam() {
+    var team = arr('team');
+    var total = team.reduce(function (s, t) { return s + (Number(t.share) || 0); }, 0) || 1;
+    var colors = ['var(--green)', 'var(--gold)', 'var(--green-deep)', 'var(--amber)', '#9AA8BC', 'var(--red)'];
+    el('teamShares').innerHTML = '<div class="split-track">' + team.map(function (t, i) {
+      return '<div class="split-seg" style="flex:' + (Number(t.share) || 0) + ';background:' + colors[i % colors.length] + '" title="' + esc(t.name) + ': ' + esc(t.share) + ' %"></div>';
+    }).join('') + '</div>';
+    el('teamList').innerHTML = team.map(function (t, i) {
+      return '<li><b><i class="sw" style="background:' + colors[i % colors.length] + '"></i>' + esc(t.name) +
+        ' — ' + num((Number(t.share) || 0) / total * 100, 1) + ' %</b><span>' + esc(t.role || '') +
+        (t.from_university ? ' · ' + esc(t.from_university) : '') + '</span></li>';
+    }).join('') || '<li class="empty">Добавьте команду в data/dashboard.json → team</li>';
   }
 
-  /* ---------- Цепочка финансирования ---------- */
+  /* ---------- Вехи ---------- */
 
-  function renderFunding() {
-    var stages = arr('funding_stages');
-    var projects = arr('projects');
-    var counts = stages.map(function (s) {
-      var list = projects.filter(function (p) { return p.funding_stage === s.key; });
-      return { stage: s, list: list, budget: list.reduce(function (a, p) { return a + (Number(p.budget) || 0); }, 0) };
-    });
-    /* «дошло до стадии» — проекты на этой стадии и дальше по цепочке */
-    var reached = counts.map(function (c, i) {
-      return counts.slice(i).reduce(function (a, x) { return a + x.list.length; }, 0);
-    });
-
-    el('fundingChain').innerHTML = counts.map(function (c, i) {
-      var conv = i > 0 && reached[i - 1] ? Math.round(reached[i] / reached[i - 1] * 100) : null;
-      return (i > 0 ? '<div class="funnel-arrow" aria-hidden="true"><span>' + conv + '%</span></div>' : '') +
-        '<button type="button" class="funnel-step' + (state.fundingStage === c.stage.key ? ' is-active' : '') + '" data-stage="' + esc(c.stage.key) + '">' +
-          '<span class="funnel-n">' + (i + 1) + '</span>' +
-          '<span class="funnel-title">' + esc(c.stage.title) + '</span>' +
-          '<span class="funnel-value">' + c.list.length + ' ' + plural(c.list.length, 'проект', 'проекта', 'проектов') + '</span>' +
-          '<span class="funnel-money">' + money(c.budget) + '</span>' +
-          '<span class="funnel-sub">' + esc(c.stage.subtitle || '') + '</span>' +
-        '</button>';
-    }).join('');
-
-    el('fundingChain').querySelectorAll('.funnel-step').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var key = btn.getAttribute('data-stage');
-        state.fundingStage = state.fundingStage === key ? null : key;
-        renderFunding();
-      });
-    });
-
-    var detail = el('fundingDetail');
-    var sel = counts.find(function (c) { return c.stage.key === state.fundingStage; });
-    if (!sel) {
-      detail.innerHTML = '<p class="widget-sub">Процент над стрелкой — доля проектов, дошедших до следующей стадии. Нажмите на стадию, чтобы увидеть её проекты.</p>';
-      return;
-    }
-    detail.innerHTML = '<h3>' + esc(sel.stage.title) + ': проекты</h3><ul class="chip-list">' +
-      sel.list.map(function (p) {
-        return '<li class="' + (isStale(p) ? 'is-stale' : '') + '">' + esc(p.title) + ' <span>УГТ ' + esc(p.trl) + ' · ' + money(p.budget) + '</span></li>';
-      }).join('') + (sel.list.length ? '' : '<li>Проектов на этой стадии нет — узкое место цепочки</li>') + '</ul>';
-  }
-
-  /* ---------- Стартап-коллективы ---------- */
-
-  function renderTeams() {
-    var teams = arr('teams');
-    var projects = {};
-    arr('projects').forEach(function (p) { projects[p.id] = p; });
-    var total = teams.length || 1;
-
-    el('teamTiles').innerHTML = TEAM_FUNDING.map(function (f) {
-      var list = teams.filter(function (t) { return t.funding === f.key; });
-      var active = state.teamFilter === f.key;
-      return '<button type="button" class="team-tile' + (active ? ' is-active' : '') + '" data-funding="' + f.key + '">' +
-        '<span class="team-value">' + list.length + '</span>' +
-        '<span class="team-title">' + f.title + '</span>' +
-        '<span class="team-bar"><span style="width:' + (list.length / total * 100) + '%"></span></span>' +
-        '</button>';
-    }).join('');
-
-    el('teamTiles').querySelectorAll('.team-tile').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        var key = btn.getAttribute('data-funding');
-        state.teamFilter = state.teamFilter === key ? null : key;
-        renderTeams();
-      });
-    });
-
-    var titles = {};
-    TEAM_FUNDING.forEach(function (f) { titles[f.key] = f.title; });
-    var list = teams.filter(function (t) { return !state.teamFilter || t.funding === state.teamFilter; });
-    el('teamList').innerHTML = list.map(function (t) {
-      var p = projects[t.project];
-      return '<li><b>' + esc(t.name) + '</b><span>' + esc(t.members) + ' ' + plural(Number(t.members) || 0, 'человек', 'человека', 'человек') +
-        ' · ' + esc(titles[t.funding] || t.funding) + (p ? ' · ' + esc(p.title) + ', УГТ ' + esc(p.trl) : '') + '</span></li>';
-    }).join('') || '<li class="empty">Нет команд</li>';
-  }
-
-  /* ---------- Венчурный билдер ---------- */
-
-  function renderVenture() {
-    var rows = arr('venture_tracker').map(function (r) {
-      return Object.assign({}, r, { _status: ventureStatus(r) });
+  function renderMilestones() {
+    var rows = arr('milestones').map(function (r) {
+      return Object.assign({}, r, { _status: msStatus(r) });
     }).filter(function (r) {
-      return state.ventureFilter === 'all' || r._status === state.ventureFilter;
+      return state.msFilter === 'all' || r._status === state.msFilter;
     }).sort(function (a, b) { return new Date(a.due) - new Date(b.due); });
 
     var pillClass = { on_track: 'ok', risk: 'warn', overdue: 'bad', done: 'done' };
-    el('ventureTable').innerHTML =
-      '<thead><tr><th>Стартап</th><th>Обязательство</th><th>Срок</th><th>Выполнение</th><th>Статус</th></tr></thead><tbody>' +
+    el('milestonesTable').innerHTML =
+      '<thead><tr><th>Веха</th><th>Срок</th><th>Выполнение</th><th>Статус</th></tr></thead><tbody>' +
       rows.map(function (r) {
         var pr = Math.max(0, Math.min(100, Number(r.progress) || 0));
-        return '<tr><td><div class="cell-title">' + esc(r.startup) + '</div><div class="cell-sub">' + esc(r.owner || '') + '</div></td>' +
-          '<td>' + esc(r.commitment) + '</td>' +
+        return '<tr><td><div class="cell-title">' + esc(r.title) + '</div><div class="cell-sub">' + esc(r.owner || '') + '</div></td>' +
           '<td>' + fmtDate(r.due) + '</td>' +
           '<td><div class="progress-mini"><span class="pm-' + pillClass[r._status] + '" style="width:' + pr + '%"></span></div><div class="cell-sub">' + pr + '%</div></td>' +
-          '<td><span class="pill pill--' + pillClass[r._status] + '">' + VENTURE_STATUS[r._status] + '</span></td></tr>';
+          '<td><span class="pill pill--' + pillClass[r._status] + '">' + MS_STATUS[r._status] + '</span></td></tr>';
       }).join('') +
-      (rows.length ? '' : '<tr><td colspan="5" class="empty">Нет обязательств с таким статусом</td></tr>') +
+      (rows.length ? '' : '<tr><td colspan="4" class="empty">Нет вех с таким статусом</td></tr>') +
       '</tbody>';
   }
 
@@ -391,8 +456,8 @@
         c.classList.toggle('is-on', c.getAttribute('data-value') === value);
       });
     }
-    if (group === 'patents') { state.patentFilter = value; renderPatents(); }
-    if (group === 'venture') { state.ventureFilter = value; renderVenture(); }
+    if (group === 'hyp') { state.hypType = value; renderHypotheses(); }
+    if (group === 'ms') { state.msFilter = value; renderMilestones(); }
   }
 
   document.querySelectorAll('.chips[data-filter]').forEach(function (box) {
@@ -402,29 +467,24 @@
     });
   });
 
-  var staleBox = el('staleOnly');
-  if (staleBox) {
-    staleBox.addEventListener('change', function () {
-      state.staleOnly = staleBox.checked;
-      renderTrl();
-    });
-  }
-
   /* ---------- загрузка и свои данные ---------- */
 
   function renderAll() {
     var d = state.data || {};
-    el('dashUniversity').textContent = (d.university || 'Университет') + ' · инновационные проекты, РИД, стартапы и МТК';
+    el('dashStartup').textContent = (d.startup || 'Ваш стартап') + (d.tagline ? ' · ' + d.tagline : '');
     el('dashSource').textContent = state.source === 'local'
       ? 'Показаны ваши данные (загружены в этом браузере)'
-      : 'Показаны тестовые данные из data/dashboard.json — замените их данными своего вуза';
+      : 'Показаны демо-данные из data/dashboard.json — замените их данными своей команды';
     el('dashReset').hidden = state.source !== 'local';
-    renderKpi();
-    renderPatents();
-    renderTrl();
-    renderFunding();
-    renderTeams();
-    renderVenture();
+    var parts = [
+      ['KPI', renderKpi], ['гипотезы', renderHypotheses], ['воронка', renderFunnel], ['рынок', renderMarket],
+      ['юнит-экономика', renderEconomics], ['деньги', renderCash], ['конкуренты', renderCompetitors],
+      ['команда', renderTeam], ['вехи', renderMilestones]
+    ];
+    /* ошибка в одном виджете (например, из-за своих данных) не ломает остальные */
+    parts.forEach(function (p) {
+      try { p[1](); } catch (e) { if (window.console) console.error('Виджет «' + p[0] + '»:', e); }
+    });
   }
 
   function loadLocal() {
@@ -466,15 +526,13 @@
       reader.onload = function () {
         try {
           var data = JSON.parse(reader.result);
-          if (!data || typeof data !== 'object' || !Array.isArray(data.projects)) {
-            throw new Error('нет массива projects');
+          if (!data || typeof data !== 'object' || !Array.isArray(data.hypotheses)) {
+            throw new Error('нет массива hypotheses');
           }
           try { localStorage.setItem(LOCAL_KEY, JSON.stringify(data)); } catch (e) {}
           state.data = data;
           state.source = 'local';
-          state.trlFilter = null;
-          state.fundingStage = null;
-          state.teamFilter = null;
+          state.funnelStep = null;
           renderAll();
         } catch (err) {
           alert('Файл не похож на данные дашборда: ' + err.message + '. Возьмите за основу «Скачать шаблон данных».');

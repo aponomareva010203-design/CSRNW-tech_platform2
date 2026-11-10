@@ -3,20 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AIOS · Инновации университета</title>
+<title>AIOS · Техностартап</title>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="AIOS">
-<meta property="og:title" content="AIOS — платформа управления инновациями университета">
-<meta property="og:description" content="Платформа управления инновационными проектами, РИД и стартапами университета">
+<meta property="og:title" content="AIOS — рабочая среда команды университетского технологического стартапа">
+<meta property="og:description" content="Рабочая среда команд университетских технологических стартапов: гипотезы, CustDev, рынок, юнит-экономика и ИИ-агенты">
 <meta property="og:url" content="https://176.108.244.194.sslip.io/">
 <meta property="og:image" content="https://176.108.244.194.sslip.io/assets/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="AIOS — платформа управления инновациями университета">
-<meta name="twitter:description" content="Платформа управления инновационными проектами, РИД и стартапами университета">
+<meta name="twitter:title" content="AIOS — рабочая среда команды университетского технологического стартапа">
+<meta name="twitter:description" content="Рабочая среда команд университетских технологических стартапов: гипотезы, CustDev, рынок, юнит-экономика и ИИ-агенты">
 <meta name="twitter:image" content="https://176.108.244.194.sslip.io/assets/og-image.png">
-<link rel="stylesheet" href="css/style.css?v=20261030a">
+<link rel="stylesheet" href="css/style.css?v=20261110a">
 </head>
 <body>
 <div class="layout">
@@ -30,7 +30,7 @@
       <div class="side-group side-group--collapsible" data-side-group="dashboards">
         <button class="side-group-title side-group-toggle" type="button" aria-expanded="true" aria-controls="sideGroupDashboards">Дашборды</button>
         <div class="side-group-items" id="sideGroupDashboards">
-        <a class="side-link active" href="index.html">Рабочий стол проректора</a>
+        <a class="side-link active" href="index.html">Рабочий стол стартапа</a>
         <a class="side-link" href="pilot.html">Статус внедрения AIOS</a>
         <a class="side-link" href="showcase.html">Витрина механизмов поддержки</a>
         </div>
@@ -80,26 +80,26 @@
   <div class="page">
 
   <section class="hero hero--desk">
-    <div class="hero-eyebrow">Агентный инжиниринг для управления инновациями в вузе</div>
-    <h1>Рабочий стол <span class="accent">проректора по инновациям</span></h1>
-    <p class="subtitle" id="dashUniversity">Университет · инновационные проекты, РИД, стартапы и МТК</p>
+    <div class="hero-eyebrow">Агентный инжиниринг для управления университетским технологическим стартапом</div>
+    <h1>Рабочий стол <span class="accent">команды стартапа</span></h1>
+    <p class="subtitle" id="dashStartup">Гипотезы, клиенты, рынок, экономика продукта и деньги — в одном месте</p>
     <div class="rule"></div>
   </section>
 
-  <!-- Путь участника сессии: от регистрации до своего агента -->
-  <ol class="session-path" aria-label="Путь участника сессии">
+  <!-- Путь команды на сессии: от регистрации до своего агента -->
+  <ol class="session-path" aria-label="Путь команды на сессии">
     <li><a href="#" id="pathLogin"><span class="n">1</span>Регистрация и вход</a></li>
-    <li><a href="cabinet.html"><span class="n">2</span>Онбординг: проект вуза</a></li>
-    <li><a href="#dashboard"><span class="n">3</span>Дашборд с метриками</a></li>
+    <li><a href="cabinet.html"><span class="n">2</span>Онбординг: карточка стартапа</a></li>
+    <li><a href="#dashboard"><span class="n">3</span>Дашборд стартапа</a></li>
     <li><a href="agents.html#templates"><span class="n">4</span>Шаблон агента</a></li>
-    <li><a href="agents.html#builder"><span class="n">5</span>Свой MD-файл</a></li>
+    <li><a href="agents.html#builder"><span class="n">5</span>Свой агент (MD-файл)</a></li>
   </ol>
 
   <div class="quick-tiles">
     <!-- Доступна после авторизации; управляется js/workspace.js -->
     <button class="tile tile--workspace" id="btnWorkspace" type="button" hidden>
       <span class="tile-title">Рабочий чат</span>
-      <span class="tile-sub">Агенты проректора, онбординг проекта, конструктор агентов</span>
+      <span class="tile-sub">Агенты команды: гипотезы, CustDev, рынок, юнит-экономика, питч</span>
     </button>
     <a class="tile tile--workspace" id="tileAutomations" href="automations.html" hidden>
       <span class="tile-title">Автоматизации</span>
@@ -108,7 +108,7 @@
   </div>
 
   <!-- Дашборд: данные из data/dashboard.json (js/dashboard.js) -->
-  <section class="dash" id="dashboard" aria-label="Дашборд проректора по инновациям">
+  <section class="dash" id="dashboard" aria-label="Дашборд стартапа">
 
     <div class="dash-toolbar">
       <div class="dash-source" id="dashSource">Загрузка данных…</div>
@@ -123,68 +123,101 @@
 
     <div class="dash-grid">
 
-      <article class="widget widget--wide" id="wTrl">
+      <article class="widget widget--wide" id="wHypotheses">
         <header class="widget-head">
           <div>
-            <h2>Портфель проектов по УГТ</h2>
-            <p class="widget-sub">Уровни готовности технологий 1–9. <span class="stale-note">Красным — проект на одном уровне <b id="staleYears">2</b> года и дольше: кандидат на закрытие</span></p>
+            <h2>Доска гипотез</h2>
+            <p class="widget-sub">Каждая гипотеза — с критерием успеха и способом проверки. Опровергнутая гипотеза — тоже результат: она экономит деньги</p>
           </div>
-          <label class="toggle"><input type="checkbox" id="staleOnly"> Только кандидаты на закрытие</label>
-        </header>
-        <div class="trl-chart" id="trlChart" role="img" aria-label="Распределение проектов по УГТ"></div>
-        <div class="legend">
-          <span><i class="sw sw--ok"></i>Проекты в развитии</span>
-          <span><i class="sw sw--stale"></i>Кандидаты на закрытие</span>
-          <span class="legend-hint" id="trlHint">Нажмите на столбец, чтобы отфильтровать таблицу</span>
-        </div>
-        <div class="table-wrap"><table class="dtable" id="projectsTable"></table></div>
-      </article>
-
-      <article class="widget widget--wide" id="wFunding">
-        <header class="widget-head">
-          <div>
-            <h2>Цепочка финансирования</h2>
-            <p class="widget-sub">РНФ → Гранты → Стартап-студия → Венчур: где находятся проекты и сколько доходит до следующей стадии</p>
-          </div>
-        </header>
-        <div class="funnel" id="fundingChain"></div>
-        <div class="funnel-detail" id="fundingDetail"></div>
-      </article>
-
-      <article class="widget" id="wPatents">
-        <header class="widget-head">
-          <div>
-            <h2>Патенты и РИД</h2>
-            <p class="widget-sub">Количество, перспективность и затраты на поддержку</p>
-          </div>
-          <div class="chips" role="group" aria-label="Фильтр перспективности" data-filter="patents">
+          <div class="chips" role="group" aria-label="Тип гипотезы" data-filter="hyp">
             <button type="button" class="chip is-on" data-value="all">Все</button>
-            <button type="button" class="chip" data-value="high">Высокая</button>
-            <button type="button" class="chip" data-value="low">Низкая</button>
+            <button type="button" class="chip" data-value="problem">Проблема</button>
+            <button type="button" class="chip" data-value="segment">Сегмент</button>
+            <button type="button" class="chip" data-value="value">Ценность</button>
+            <button type="button" class="chip" data-value="price">Цена</button>
+            <button type="button" class="chip" data-value="channel">Канал</button>
+            <button type="button" class="chip" data-value="growth">Рост</button>
           </div>
         </header>
-        <div class="split-bar" id="patentsSplit"></div>
-        <div class="table-wrap"><table class="dtable" id="patentsTable"></table></div>
+        <div class="hyp-board" id="hypBoard"></div>
       </article>
 
-      <article class="widget" id="wTeams">
+      <article class="widget widget--wide" id="wFunnel">
         <header class="widget-head">
           <div>
-            <h2>Стартап-коллективы</h2>
-            <p class="widget-sub">Команды по источнику финансирования</p>
+            <h2>Воронка CustDev и продаж</h2>
+            <p class="widget-sub">От первого контакта до платящего клиента: где команда теряет больше всего</p>
           </div>
         </header>
-        <div class="team-tiles" id="teamTiles"></div>
+        <div class="funnel funnel--many" id="custdevFunnel"></div>
+        <div class="funnel-detail" id="funnelDetail"></div>
+      </article>
+
+      <article class="widget" id="wMarket">
+        <header class="widget-head">
+          <div>
+            <h2>Размер рынка</h2>
+            <p class="widget-sub">TAM → SAM → SOM и сегменты для первых продаж</p>
+          </div>
+        </header>
+        <div class="mkt" id="marketBars"></div>
+        <div class="table-wrap"><table class="dtable" id="segmentsTable"></table></div>
+      </article>
+
+      <article class="widget" id="wEconomics">
+        <header class="widget-head">
+          <div>
+            <h2>Юнит-экономика</h2>
+            <p class="widget-sub">Зарабатываем ли мы на одном клиенте</p>
+          </div>
+        </header>
+        <div class="ue-grid" id="ueGrid"></div>
+        <div id="ueVerdict"></div>
+      </article>
+
+      <article class="widget widget--wide" id="wCash">
+        <header class="widget-head">
+          <div>
+            <h2>Деньги и runway</h2>
+            <p class="widget-sub">Выручка и расходы по месяцам (бледные столбцы — план), под столбцами — остаток денег, млн ₽</p>
+          </div>
+          <div class="legend">
+            <span><i class="sw sw--rev"></i>Выручка</span>
+            <span><i class="sw sw--cost"></i>Расходы</span>
+          </div>
+        </header>
+        <div class="cash-chart" id="cashChart" role="img" aria-label="Выручка и расходы по месяцам"></div>
+        <div id="cashNote"></div>
+      </article>
+
+      <article class="widget" id="wCompetitors">
+        <header class="widget-head">
+          <div>
+            <h2>Конкуренты и альтернативы</h2>
+            <p class="widget-sub">Чем клиент решает задачу сегодня</p>
+          </div>
+        </header>
+        <div class="table-wrap"><table class="dtable" id="competitorsTable"></table></div>
+      </article>
+
+      <article class="widget" id="wTeam">
+        <header class="widget-head">
+          <div>
+            <h2>Команда и доли</h2>
+            <p class="widget-sub">Роли основателей и структура капитала (cap table)</p>
+          </div>
+        </header>
+        <div id="teamShares"></div>
         <ul class="team-list" id="teamList"></ul>
       </article>
 
-      <article class="widget widget--wide" id="wVenture">
+      <article class="widget widget--wide" id="wMilestones">
         <header class="widget-head">
           <div>
-            <h2>Венчурный билдер: трекер обязательств</h2>
-            <p class="widget-sub">Активность стартапов относительно принятых обязательств</p>
+            <h2>Вехи стартапа</h2>
+            <p class="widget-sub">Контрольные точки команды: гранты, пилоты, договор с вузом, раунд</p>
           </div>
-          <div class="chips" role="group" aria-label="Фильтр статуса" data-filter="venture">
+          <div class="chips" role="group" aria-label="Фильтр статуса" data-filter="ms">
             <button type="button" class="chip is-on" data-value="all">Все</button>
             <button type="button" class="chip" data-value="on_track">В графике</button>
             <button type="button" class="chip" data-value="risk">Риск</button>
@@ -192,7 +225,7 @@
             <button type="button" class="chip" data-value="done">Выполнено</button>
           </div>
         </header>
-        <div class="table-wrap"><table class="dtable" id="ventureTable"></table></div>
+        <div class="table-wrap"><table class="dtable" id="milestonesTable"></table></div>
       </article>
 
     </div>
@@ -208,7 +241,7 @@
 <script src="js/auth.js?v=20261029a"></script>
 <script src="js/agent_views.js?v=20260929m"></script>
 <script src="js/thinking.js?v=20260925zq"></script>
-<script src="js/workspace.js?v=20261029a"></script>
-<script src="js/dashboard.js?v=20261027a"></script>
+<script src="js/workspace.js?v=20261110a"></script>
+<script src="js/dashboard.js?v=20261110a"></script>
 </body>
 </html>

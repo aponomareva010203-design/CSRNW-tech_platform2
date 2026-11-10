@@ -23,7 +23,7 @@ from api.runtime.users import UserStore
 ADMIN_LOGIN = "a.ponomareva@csr-nw.ru"
 ADMIN_PASSWORD = "1234"
 
-SKILL_ID = "venture-builder"  # навык каталога data/skills.json
+SKILL_ID = "pitch-coach"  # навык каталога data/skills.json
 
 
 @pytest.fixture(autouse=True)
@@ -143,7 +143,7 @@ def test_radar_stays_a_chat_skill_for_everyone():
 
     client = _client()
     # минимум длины запроса для подсказок — 8 символов (короче отсекается)
-    resp = client.get("/api/chat/skills-suggest", params={"q": "трекер стартапов"})
+    resp = client.get("/api/chat/skills-suggest", params={"q": "подготовка к питчу"})
     assert resp.status_code == 200
     ids = [s.get("id") for s in resp.json()["items"]]
     assert SKILL_ID in ids, "чипы навыка доступны любому пользователю чата"

@@ -31,7 +31,7 @@ ADMIN_LOGIN = "a.ponomareva@csr-nw.ru"
 ADMIN_PASSWORD = "1234"
 
 ONBOARDING = "project-onboarding"  # агент каталога (data/skills.json)
-ARCHITECT = "portfolio-analyst"
+ARCHITECT = "hypothesis-tester"
 
 
 @pytest.fixture()
@@ -130,7 +130,7 @@ def test_overview_lists_catalog_agents(client):
     resp = client.get("/api/catalog/agents/overview")
     assert resp.status_code == 200
     items = resp.json()["items"]
-    assert set(items) >= {ONBOARDING, ARCHITECT, "ecosystem-analyst"}
+    assert set(items) >= {ONBOARDING, ARCHITECT, "market-analyst"}
     assert items[ONBOARDING] == {"stars": 0, "comments": 0, "projects": 0}
 
 

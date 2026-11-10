@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Полигоны — AIOS · Инновации университета</title>
-<link rel="stylesheet" href="css/style.css?v=20261030a">
+<title>Полигоны — AIOS · Техностартап</title>
+<link rel="stylesheet" href="css/style.css?v=20261110a">
 </head>
 <body>
 <div class="layout">
@@ -18,7 +18,7 @@
       <div class="side-group side-group--collapsible" data-side-group="dashboards">
         <button class="side-group-title side-group-toggle" type="button" aria-expanded="true" aria-controls="sideGroupDashboards">Дашборды</button>
         <div class="side-group-items" id="sideGroupDashboards">
-        <a class="side-link" href="index.html">Рабочий стол проректора</a>
+        <a class="side-link" href="index.html">Рабочий стол стартапа</a>
         <a class="side-link" href="pilot.html">Статус внедрения AIOS</a>
         <a class="side-link" href="showcase.html">Витрина механизмов поддержки</a>
         </div>
@@ -68,13 +68,14 @@
   <div class="page">
 
   <section class="section-head">
-    <a class="backlink" href="index.html">← AIOS · Инновации университета</a>
+    <a class="backlink" href="index.html">← AIOS · Техностартап</a>
     <h1>Полигоны</h1>
-    <p class="section-lead">Симуляционная среда офиса проректора: проверьте гипотезу, идею или управленческое решение
-      до того, как тратить бюджет. <b>Сценарная модель</b> прогоняет портфель проектов по УГТ сотни раз (Монте-Карло)
-      и показывает, в какой доле прогонов гипотеза подтверждается в каждом сценарии; работает без LLM.
-      <b>ИИ-фокус-группа</b> — виртуальные инвестор, индустриальный партнёр, эксперт фонда, ЦТТ, студент-основатель
-      и финансовый директор оценивают идею со своей стороны.</p>
+    <p class="section-lead">Симуляционная среда команды: проверьте гипотезу о деньгах, цене или канале продаж
+      до того, как тратить деньги и время. <b>Сценарная модель</b> — помесячная финансовая модель стартапа
+      (клиенты, CAC, отток, маржа, расходы, грант и раунд), которая прогоняется сотни раз с разбросом допущений
+      (Монте-Карло) и показывает, в какой доле прогонов гипотеза подтверждается в каждом сценарии; работает без LLM.
+      <b>ИИ-фокус-группа</b> — виртуальные инвестор, бизнес-ангел, эксперт фонда, клиенты и трекер акселератора
+      оценивают идею или питч со своей стороны.</p>
     <div class="rule"></div>
   </section>
 
@@ -118,7 +119,7 @@
           <fieldset class="pg-box">
             <legend>Гипотеза</legend>
             <label class="mdl-field"><span>Формулировка</span>
-              <textarea id="hypStatement" rows="2" maxlength="600" placeholder="Например: стартап-студия даст не меньше 8 стартапов за 5 лет"></textarea></label>
+              <textarea id="hypStatement" rows="2" maxlength="600" placeholder="Например: деньги не закончатся до раунда хотя бы в 70 % прогонов"></textarea></label>
             <div class="pg-row">
               <label class="mdl-field pg-grow"><span>Метрика</span><select id="hypMetric"></select></label>
               <label class="mdl-field"><span>Условие</span><select id="hypOp"><option value=">=">не меньше</option><option value="<=">не больше</option></select></label>
@@ -128,19 +129,16 @@
           </fieldset>
 
           <fieldset class="pg-box">
-            <legend>Портфель и правила</legend>
+            <legend>Стартап и допущения</legend>
+            <p class="pg-hint">Суммы — тыс. ₽, время — месяцы. Разброс CAC и оттока задаёт, насколько вы не уверены в этих цифрах.</p>
             <div class="pg-params" id="pgParams"></div>
-            <div class="pg-sub">Стартовый портфель: проектов на каждом УГТ</div>
-            <div class="pg-levels-row" id="pgInitial"></div>
-            <details class="pg-details">
-              <summary>Шансы по УГТ за год и затраты на проект</summary>
-              <table class="pg-ltable" id="pgLevels"></table>
-            </details>
+            <div class="pg-sub">Грант и инвестиционный раунд</div>
+            <div class="pg-params" id="pgFunding"></div>
           </fieldset>
 
           <fieldset class="pg-box">
             <legend>Сценарии</legend>
-            <p class="pg-hint">Базовый сценарий — параметры выше без изменений. Остальные — управленческие решения, которые сравниваем с ним.</p>
+            <p class="pg-hint">Базовый сценарий — параметры выше без изменений. Остальные — решения команды, которые сравниваем с ним (цена, канал, найм, экономия).</p>
             <div id="pgScenarios"></div>
             <button class="btn-register pg-btn-small" id="pgAddScenario" type="button">+ Сценарий</button>
           </fieldset>
@@ -157,7 +155,7 @@
         <div class="pg-col">
           <fieldset class="pg-box">
             <legend>Идея для оценки</legend>
-            <textarea id="pgIdea" rows="7" maxlength="4000" placeholder="Опишите идею, проект или управленческое решение: что делаем, для кого, сколько стоит, какой результат ожидаем"></textarea>
+            <textarea id="pgIdea" rows="7" maxlength="4000" placeholder="Опишите идею, продукт или питч: для кого, какую проблему решаем, сколько стоит, чего просим"></textarea>
             <label class="imdl-check pg-check"><input type="checkbox" id="pgUseSim" checked> Передать участникам результаты сценарной модели (если симуляция запущена)</label>
           </fieldset>
           <fieldset class="pg-box">
@@ -181,7 +179,7 @@
 <script src="js/auth.js?v=20261029a"></script>
 <script src="js/agent_views.js?v=20260929m"></script>
 <script src="js/thinking.js?v=20260925zq"></script>
-<script src="js/polygons.js?v=20261029a"></script>
-<script src="js/workspace.js?v=20261029a"></script>
+<script src="js/polygons.js?v=20261110a"></script>
+<script src="js/workspace.js?v=20261110a"></script>
 </body>
 </html>

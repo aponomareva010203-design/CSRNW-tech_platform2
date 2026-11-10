@@ -970,7 +970,7 @@ def _builtin_tools(root: Path) -> list:
         return "".join(parts)
 
     async def run_polygon(args: dict, ctx: dict | None) -> dict:
-        """Прогон полигона (сценарная модель портфеля по УГТ) — проверка гипотезы."""
+        """Прогон полигона (финансовая модель стартапа, Монте-Карло) — проверка гипотезы."""
         from . import polygons
 
         polygon_id = str(args.get("polygon_id") or "").strip()
@@ -992,11 +992,12 @@ def _builtin_tools(root: Path) -> list:
             f = r["final"]
             rows.append({
                 "сценарий": r["name"],
-                "стартапы": f["startups"]["mean"],
-                "лицензии": f["licenses"]["mean"],
-                "застрявшие проекты": f["stale"]["mean"],
-                "затраты, тыс. ₽": f["cost"]["mean"],
-                "отдача на 1 ₽": f["roi"]["mean"],
+                "без кассового разрыва, % прогонов": round(f["survived"]["mean"] * 100),
+                "клиенты в конце": f["customers"]["mean"],
+                "MRR в конце, тыс. ₽": f["mrr"]["mean"],
+                "деньги в конце, тыс. ₽": f["cash"]["mean"],
+                "минимум денег, тыс. ₽": f["min_cash"]["mean"],
+                "LTV/CAC": f["ltv_cac"]["mean"],
                 "гипотеза подтверждается, % прогонов": (
                     round(r["hypothesis_probability"] * 100) if r["hypothesis_probability"] is not None else None
                 ),
@@ -1005,7 +1006,7 @@ def _builtin_tools(root: Path) -> list:
             "ok": True,
             "polygon_id": polygon_id or None,
             "hypothesis": sim["hypothesis"],
-            "horizon_years": sim["params"]["horizon_years"],
+            "horizon_months": sim["params"]["horizon_months"],
             "runs": sim["params"]["runs"],
             "results": rows,
             "page_url": f"/polygons.html?id={polygon_id}" if polygon_id else "/polygons.html",
@@ -1208,7 +1209,7 @@ def _builtin_tools(root: Path) -> list:
                 "properties": {
                     "card": {
                         "type": "object",
-                        "description": "Карточка: {project_id?, project_type?: startup|initiative, title?, description?, goal?, team_size?, participants?, departments?, budget?, groundwork?, technology?, trl?, market?, funding_stage?, commercialization?, kpi?, milestones?, risks?, groundwork_links?, groundwork_files?, presentation_files?, presentation?, artifacts?, status?}. artifacts — статусы и гипотезы артефактов пилота {rag?, models?, agents?, polygon?, social?}: значение — {status: 0..3, hypothesis?} или строка-гипотеза (тогда статус = 1 «гипотеза сформулирована»). Статусы: 0 не начато, 1 гипотеза сформулирована, 2 в процессе создания, 3 завершено.",
+                        "description": "Карточка: {project_id?, project_type?: startup|initiative, title?, description?, goal?, team_size?, participants?, departments?, budget?, groundwork?, technology?, trl?, market?, business_model?, funding_stage?, commercialization?, kpi?, milestones?, risks?, groundwork_links?, groundwork_files?, presentation_files?, presentation?, artifacts?, status?}. artifacts — статусы и гипотезы артефактов пилота {rag?, models?, agents?, polygon?, social?}: значение — {status: 0..3, hypothesis?} или строка-гипотеза (тогда статус = 1 «гипотеза сформулирована»). Статусы: 0 не начато, 1 гипотеза сформулирована, 2 в процессе создания, 3 завершено.",
                     },
                 },
                 "required": ["card"],
@@ -1411,14 +1412,14 @@ def _builtin_tools(root: Path) -> list:
         ),
         Tool(
             name="run_polygon",
-            description="Проверяет гипотезу офиса проректора на полигоне — сценарной модели портфеля проектов по УГТ (Монте-Карло, без LLM): сравнивает базовый сценарий с управленческими решениями (стартап-студия, гранты, контрольные точки) и считает, в какой доле прогонов гипотеза подтверждается. Передайте polygon_id примера (pg-1a0e5c0201 — стартап-студия, pg-1a0e5c0202 — ревизия портфеля) или своего полигона; params/scenarios/hypothesis — необязательные правки поверх него.",
+            description="Проверяет гипотезу команды стартапа на полигоне — помесячной финансовой модели стартапа (Монте-Карло, без LLM): клиенты из бюджета продаж и CAC, отток, маржа, постоянные расходы, грант и инвестиционный раунд с вероятностью. Сравнивает базовый сценарий с решениями команды (цена, канал, бюджет, найм) и считает, в какой доле прогонов гипотеза подтверждается. Передайте polygon_id примера (pg-1a0e5c0201 — runway до pre-seed раунда, pg-1a0e5c0202 — канал через интеграторов) или своего полигона; params/scenarios/hypothesis — необязательные правки поверх него.",
             parameters={
                 "type": "object",
                 "properties": {
                     "polygon_id": {"type": "string", "description": "id полигона (pg-…)"},
-                    "params": {"type": "object", "description": "правки параметров: horizon_years, intake_per_year, entry_level, exit_level, annual_budget (тыс. ₽), fixed_cost, p_license, license_income, investment_per_startup, initial {УГТ: число}, levels {УГТ: {p_up, p_drop, cost}}"},
-                    "scenarios": {"type": "array", "items": {"type": "object"}, "description": "сценарии: {id, name, valley_boost %, up_boost %, drop_change %, p_license_change п.п., intake_per_year, annual_budget, fixed_cost}"},
-                    "hypothesis": {"type": "object", "description": "{statement, metric: startups|licenses|exits|income|investments|cost|roi|stale|active, op: >=|<=, value, scenario_id}"},
+                    "params": {"type": "object", "description": "правки параметров (тыс. ₽, месяцы): horizon_months, start_cash, fixed_costs, fixed_growth (%/мес), marketing, cac, cac_spread (%), price (выручка с клиента в месяц), gross_margin (доля), churn (доля в месяц), churn_spread (%), initial_customers, sales_lag_months, grant_amount, grant_month, grant_prob, round_amount, round_month, round_prob, round_min_mrr"},
+                    "scenarios": {"type": "array", "items": {"type": "object"}, "description": "сценарии: {id, name, price_change %, cac_change %, churn_change %, и абсолютные marketing, fixed_costs, start_cash, sales_lag_months, gross_margin, grant_amount, grant_prob, round_amount, round_prob, round_min_mrr}"},
+                    "hypothesis": {"type": "object", "description": "{statement, metric: survived|cash|min_cash|runway|customers|mrr|revenue|raised|breakeven|ltv_cac, op: >=|<=, value, scenario_id}"},
                 },
             },
             handler=run_polygon,

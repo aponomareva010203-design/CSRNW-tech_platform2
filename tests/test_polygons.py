@@ -1,4 +1,4 @@
-"""Полигоны: сценарная модель портфеля по УГТ, проверка гипотез, хранилище,
+"""Полигоны: финансовая модель стартапа (Монте-Карло), проверка гипотез, хранилище,
 HTTP-слой и ИИ-фокус-группа (LLM подменяется заглушкой)."""
 
 import asyncio
@@ -47,40 +47,49 @@ def _token(client):
 
 
 def test_simulation_is_deterministic_and_scenarios_differ():
-    params = {"runs": 100, "horizon_years": 4, "initial": {"3": 10, "4": 10}, "intake_per_year": 5}
-    scenarios = [{"id": "boost", "name": "Студия", "valley_boost": 80}]
+    params = {"runs": 100, "horizon_months": 12, "start_cash": 2000, "fixed_costs": 300,
+              "marketing": 150, "cac": 300, "price": 100, "gross_margin": 0.6, "churn": 0.03}
+    scenarios = [{"id": "cheap", "name": "Дешёвый канал", "cac_change": -60}]
     a = polygons.simulate(params, scenarios)
     b = polygons.simulate(params, scenarios)
     assert a["results"] == b["results"]  # тот же seed — тот же результат
-    base, boost = a["results"]
-    assert base["id"] == "base" and boost["id"] == "boost"
-    assert boost["final"]["exits"]["mean"] > base["final"]["exits"]["mean"]
-    assert len(base["series"]["startups"]) == 4
-    s = base["final"]["cost"]
+    base, cheap = a["results"]
+    assert base["id"] == "base" and cheap["id"] == "cheap"
+    assert cheap["final"]["customers"]["mean"] > base["final"]["customers"]["mean"]
+    assert len(base["series"]["cash"]) == 12
+    s = base["final"]["cash"]
     assert s["p10"] <= s["mean"] <= s["p90"]
 
 
 def test_hypothesis_probability():
-    params = {"runs": 60, "initial": {"6": 20}, "exit_level": 7, "p_license": 0}
-    sure = polygons.simulate(params, [], {"statement": "x", "metric": "startups", "op": ">=", "value": 1})
-    never = polygons.simulate(params, [], {"statement": "x", "metric": "startups", "op": ">=", "value": 10_000})
-    assert sure["results"][0]["hypothesis_probability"] == 1.0
-    assert never["results"][0]["hypothesis_probability"] == 0.0
+    rich = {"runs": 60, "start_cash": 100_000, "fixed_costs": 100, "marketing": 0}
+    poor = {"runs": 60, "start_cash": 100, "fixed_costs": 500, "marketing": 0, "initial_customers": 0}
+    hyp = {"statement": "доживём", "metric": "survived", "op": ">=", "value": 1}
+    assert polygons.simulate(rich, [], hyp)["results"][0]["hypothesis_probability"] == 1.0
+    assert polygons.simulate(poor, [], hyp)["results"][0]["hypothesis_probability"] == 0.0
 
 
-def test_budget_limits_progress():
-    params = {"runs": 80, "initial": {"4": 30}, "levels": {"4": {"p_up": 0.6, "p_drop": 0, "cost": 1000}}}
-    free = polygons.simulate(params)["results"][0]["final"]["exits"]["mean"]
-    tight = polygons.simulate({**params, "annual_budget": 3000})["results"][0]["final"]["exits"]["mean"]
-    assert tight < free
+def test_runway_and_funding():
+    """Без выручки runway = деньги / расходы; грант с вероятностью 1 продлевает жизнь."""
+    params = {"runs": 30, "horizon_months": 24, "start_cash": 1000, "fixed_costs": 100, "fixed_growth": 0,
+              "marketing": 0, "initial_customers": 0, "cac_spread": 0, "churn_spread": 0}
+    dry = polygons.simulate(params)["results"][0]["final"]
+    assert dry["runway"]["mean"] == 10 and dry["survived"]["mean"] == 0
+    granted = polygons.simulate({**params, "grant_amount": 2000, "grant_month": 5, "grant_prob": 1})
+    f = granted["results"][0]["final"]
+    assert f["runway"]["mean"] == 24 and f["survived"]["mean"] == 1 and f["raised"]["mean"] == 2000
+    # раунд не закрывается, если MRR ниже порога
+    no_round = polygons.simulate({**params, "round_amount": 5000, "round_month": 3, "round_prob": 1,
+                                  "round_min_mrr": 10})
+    assert no_round["results"][0]["final"]["raised"]["mean"] == 0
 
 
 def test_params_are_clamped():
-    p = polygons.normalize_params({"runs": 10**9, "horizon_years": -5, "levels": {"3": {"p_up": 0.9, "p_drop": 0.9}}})
-    assert p["runs"] == polygons.MAX_RUNS and p["horizon_years"] == 1
-    assert abs(p["levels"]["3"]["p_up"] + p["levels"]["3"]["p_drop"] - 1) < 1e-9
-    with pytest.raises(polygons.PolygonError):
-        polygons.normalize_params({"initial": {"1": 300, "2": 300}})
+    p = polygons.normalize_params({"runs": 10**9, "horizon_months": -5, "churn": 7, "gross_margin": 3})
+    assert p["runs"] == polygons.MAX_RUNS and p["horizon_months"] == 3
+    assert p["churn"] == 1 and p["gross_margin"] == 1
+    sc = polygons.normalize_scenario({"price_change": 10_000, "marketing": "abc"}, 0)
+    assert sc["price_change"] == 500 and sc["marketing"] == polygons.PARAM_DEFAULTS["marketing"]
 
 
 def test_examples_are_valid_and_run():
@@ -131,7 +140,7 @@ def test_panel_requires_llm(monkeypatch):
     monkeypatch.setattr(chat, "get_provider", lambda *a, **k: None)
     client = _client()
     h = _token(client)
-    resp = client.post("/api/polygons/panel", json={"idea": "Запустить стартап-студию в вузе"}, headers=h)
+    resp = client.post("/api/polygons/panel", json={"idea": "Продавать мониторинг подшипников через интеграторов"}, headers=h)
     assert resp.status_code == 503
 
 
@@ -148,7 +157,7 @@ def test_panel_with_stub_provider(monkeypatch):
     monkeypatch.setattr(chat, "get_provider", lambda *a, **k: Stub())
     client = _client()
     h = _token(client)
-    resp = client.post("/api/polygons/panel", json={"idea": "Запустить стартап-студию в вузе"}, headers=h)
+    resp = client.post("/api/polygons/panel", json={"idea": "Продавать мониторинг подшипников через интеграторов"}, headers=h)
     assert resp.status_code == 200
     body = resp.json()
     assert len(body["opinions"]) == len(polygons.DEFAULT_PANEL)

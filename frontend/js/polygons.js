@@ -3,10 +3,11 @@
 
    - Список: примеры платформы (data/polygons/*.json) и свои полигоны
      (GET /api/polygons); «Создать полигон» открывает копию первого примера.
-   - Сценарная модель: параметры портфеля по УГТ, сценарии и гипотеза →
+   - Сценарная модель: допущения финансовой модели стартапа (деньги,
+     расходы, цена, CAC, отток, грант, раунд), сценарии и гипотеза →
      POST /api/polygons/simulate (Монте-Карло на сервере, без LLM) →
-     проверка гипотезы по сценариям, таблица KPI с коридором p10–p90,
-     график метрики по годам, распределение портфеля по УГТ.
+     проверка гипотезы по сценариям, таблица итогов с коридором p10–p90,
+     график метрики по месяцам, доля прогонов без кассового разрыва.
    - ИИ-фокус-группа: идея + роли → POST /api/polygons/panel (нужен вход и
      подключённый LLM) → оценки, аргументы, условия, сводка.
    - Сохранение: POST /api/polygons (свой полигон; правка примера
@@ -22,30 +23,44 @@
 
   var $ = function (id) { return document.getElementById(id); };
   var COLORS = ['#5A6B82', '#1F5AA6', '#2E9D5B', '#B26A00', '#7A3FB0', '#C8372D', '#0F7C8C'];
+  /* [ключ, подпись, шаг] — api/runtime/polygons.PARAM_SPEC */
   var PARAMS = [
-    ['horizon_years', 'Горизонт, лет', 1],
+    ['horizon_months', 'Горизонт, мес.', 1],
     ['runs', 'Прогонов Монте-Карло', 10],
-    ['intake_per_year', 'Новых проектов в год', 1],
-    ['entry_level', 'УГТ новых проектов', 1],
-    ['exit_level', 'Выход на рынок с УГТ', 1],
-    ['annual_budget', 'Бюджет портфеля, тыс. ₽/год (0 — без лимита)', 1000],
-    ['fixed_cost', 'Постоянные затраты, тыс. ₽/год', 1000],
-    ['p_license', 'Доля выходов через лицензию (0–1)', 0.05],
-    ['license_income', 'Доход от лицензии, тыс. ₽/год', 100],
-    ['investment_per_startup', 'Инвестиции на стартап, тыс. ₽', 1000],
-    ['stale_years', 'Застой: лет на одном УГТ', 1]
+    ['start_cash', 'Деньги на старте', 100],
+    ['fixed_costs', 'Постоянные расходы в месяц', 10],
+    ['fixed_growth', 'Рост постоянных расходов, %/мес.', 0.5],
+    ['marketing', 'Продажи и маркетинг в месяц', 10],
+    ['cac', 'CAC — стоимость привлечения клиента', 10],
+    ['cac_spread', 'Разброс CAC, %', 5],
+    ['price', 'Выручка с клиента в месяц', 1],
+    ['gross_margin', 'Валовая маржа (0–1)', 0.01],
+    ['churn', 'Отток клиентов в месяц (0–1)', 0.005],
+    ['churn_spread', 'Разброс оттока, %', 5],
+    ['initial_customers', 'Клиентов на старте', 1],
+    ['sales_lag_months', 'Цикл сделки: месяцев до первых продаж', 1]
+  ];
+  var FUNDING = [
+    ['grant_amount', 'Грант, сумма (0 — нет)', 100],
+    ['grant_month', 'Грант, месяц поступления', 1],
+    ['grant_prob', 'Грант, вероятность (0–1)', 0.05],
+    ['round_amount', 'Раунд, сумма (0 — нет)', 1000],
+    ['round_month', 'Раунд, месяц закрытия', 1],
+    ['round_prob', 'Раунд, вероятность (0–1)', 0.05],
+    ['round_min_mrr', 'Раунд, нужен MRR не ниже', 100]
   ];
   var SC_FIELDS = [
-    ['valley_boost', 'Шанс перехода на УГТ 3–5, %'],
-    ['up_boost', 'Шанс перехода на всех УГТ, %'],
-    ['drop_change', 'Закрытие проектов, %'],
-    ['p_license_change', 'Доля лицензий, п.п.'],
-    ['intake_per_year', 'Новых проектов в год'],
-    ['annual_budget', 'Бюджет, тыс. ₽/год'],
-    ['fixed_cost', 'Постоянные затраты, тыс. ₽/год']
+    ['price_change', 'Цена, %'],
+    ['cac_change', 'CAC, %'],
+    ['churn_change', 'Отток, %'],
+    ['marketing', 'Продажи и маркетинг в месяц'],
+    ['fixed_costs', 'Постоянные расходы в месяц'],
+    ['start_cash', 'Деньги на старте'],
+    ['sales_lag_months', 'Месяцев до первых продаж'],
+    ['grant_prob', 'Вероятность гранта (0–1)'],
+    ['round_prob', 'Вероятность раунда (0–1)']
   ];
-
-  var state = { examples: [], items: [], metrics: {}, current: null, sim: null, chartMetric: 'startups' };
+  var state = { examples: [], items: [], metrics: {}, current: null, sim: null, chartMetric: 'cash' };
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -137,29 +152,17 @@
     work.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  function renderParams() {
-    var p = state.current.params || {};
-    $('pgParams').innerHTML = PARAMS.map(function (f) {
+  function paramInputs(list, p) {
+    return list.map(function (f) {
       return '<label class="mdl-field"><span>' + esc(f[1]) + '</span><input type="number" step="' + f[2] +
         '" data-param="' + f[0] + '" value="' + (p[f[0]] != null ? p[f[0]] : '') + '"></label>';
     }).join('');
-    var init = p.initial || {};
-    var html = '';
-    for (var l = 1; l <= 8; l++) {
-      html += '<label class="pg-lvl"><span>УГТ ' + l + '</span><input type="number" min="0" step="1" data-init="' + l +
-        '" value="' + (init[l] || 0) + '"></label>';
-    }
-    $('pgInitial').innerHTML = html;
-    var lv = p.levels || {};
-    var rows = '<thead><tr><th>УГТ</th><th>Переход за год</th><th>Закрытие за год</th><th>Затраты, тыс. ₽</th></tr></thead><tbody>';
-    for (var k = 1; k <= 8; k++) {
-      var x = lv[k] || {};
-      rows += '<tr><td>' + k + ' → ' + (k + 1) + '</td>' +
-        '<td><input type="number" min="0" max="1" step="0.01" data-level="' + k + '" data-key="p_up" value="' + (x.p_up != null ? +(+x.p_up).toFixed(3) : '') + '"></td>' +
-        '<td><input type="number" min="0" max="1" step="0.01" data-level="' + k + '" data-key="p_drop" value="' + (x.p_drop != null ? +(+x.p_drop).toFixed(3) : '') + '"></td>' +
-        '<td><input type="number" min="0" step="100" data-level="' + k + '" data-key="cost" value="' + (x.cost != null ? x.cost : '') + '"></td></tr>';
-    }
-    $('pgLevels').innerHTML = rows + '</tbody>';
+  }
+
+  function renderParams() {
+    var p = state.current.params || {};
+    $('pgParams').innerHTML = paramInputs(PARAMS, p);
+    $('pgFunding').innerHTML = paramInputs(FUNDING, p);
   }
 
   function renderScenarios() {
@@ -171,7 +174,7 @@
         '<textarea data-f="description" rows="2" maxlength="600" placeholder="Что меняем в управлении">' + esc(sc.description || '') + '</textarea>' +
         '<div class="pg-sc-fields">' + SC_FIELDS.map(function (f) {
           return '<label class="mdl-field"><span>' + esc(f[1]) + '</span><input type="number" step="any" data-f="' + f[0] +
-            '" value="' + (sc[f[0]] != null ? sc[f[0]] : '') + '" placeholder="' + (/boost|change/.test(f[0]) ? '0' : 'как в базе') + '"></label>';
+            '" value="' + (sc[f[0]] != null ? sc[f[0]] : '') + '" placeholder="' + (/change/.test(f[0]) ? '0' : 'как в базе') + '"></label>';
         }).join('') + '</div></div>';
     }).join('');
     $('hypScenario').innerHTML = '<option value="">все сценарии</option>' + list.map(function (sc) {
@@ -198,13 +201,6 @@
     var p = c.params || (c.params = {});
     work.querySelectorAll('[data-param]').forEach(function (el) {
       if (el.value !== '') p[el.dataset.param] = parseFloat(el.value);
-    });
-    p.initial = {};
-    work.querySelectorAll('[data-init]').forEach(function (el) { p.initial[el.dataset.init] = parseInt(el.value || '0', 10); });
-    p.levels = p.levels || {};
-    work.querySelectorAll('[data-level]').forEach(function (el) {
-      var lv = p.levels[el.dataset.level] || (p.levels[el.dataset.level] = {});
-      if (el.value !== '') lv[el.dataset.key] = parseFloat(el.value);
     });
     c.scenarios = Array.prototype.map.call(work.querySelectorAll('.pg-sc'), function (box, i) {
       var sc = { id: (c.scenarios[i] && c.scenarios[i].id) || ('s' + (i + 1)) };
@@ -254,7 +250,7 @@
   function summaryOf(sim) {
     return sim.results.map(function (r) {
       return { id: r.id, name: r.name, hypothesis_probability: r.hypothesis_probability,
-        startups: r.final.startups.mean, licenses: r.final.licenses.mean, roi: r.final.roi.mean };
+        survived: r.final.survived.mean, customers: r.final.customers.mean, mrr: r.final.mrr.mean, cash: r.final.cash.mean };
     });
   }
 
@@ -266,7 +262,7 @@
       out += '<div class="pg-hyp"><div class="pg-hyp-title">Проверка гипотезы</div>' +
         '<div class="pg-hyp-text">«' + esc(hyp.statement || (sim.metrics[hyp.metric] + ' ' + hyp.op + ' ' + hyp.value)) + '»</div>' +
         '<div class="pg-hyp-rule">' + esc(sim.metrics[hyp.metric]) + (hyp.op === '>=' ? ' не меньше ' : ' не больше ') + fmt(hyp.value) +
-        ' к концу горизонта (' + sim.params.horizon_years + ' лет)</div>';
+        ' к концу горизонта (' + sim.params.horizon_months + ' мес.)</div>';
       sim.results.forEach(function (r, i) {
         var pr = r.hypothesis_probability || 0;
         var focus = hyp.scenario_id && hyp.scenario_id === r.id;
@@ -277,45 +273,57 @@
       });
       out += '<p class="pg-hint">Доля прогонов Монте-Карло, в которых цель достигнута. ≥ 70 % — гипотеза устойчива к случайностям, 40–70 % — зависит от удачи, &lt; 40 % — пересмотрите решение или цель.</p></div>';
     }
-    var keys = ['startups', 'licenses', 'exits', 'investments', 'income', 'cost', 'roi', 'stale', 'active'];
-    out += '<div class="pg-table-wrap"><table class="pg-table"><thead><tr><th>Итог за ' + sim.params.horizon_years + ' лет</th>' +
+    var keys = ['survived', 'runway', 'min_cash', 'cash', 'customers', 'mrr', 'revenue', 'raised', 'breakeven', 'ltv_cac'];
+    out += '<div class="pg-table-wrap"><table class="pg-table"><thead><tr><th>Итог за ' + sim.params.horizon_months + ' мес.</th>' +
       sim.results.map(function (r, i) { return '<th><i style="background:' + COLORS[i % COLORS.length] + '"></i>' + esc(r.name) + '</th>'; }).join('') +
       '</tr></thead><tbody>' + keys.map(function (k) {
         return '<tr><td>' + esc(sim.metrics[k]) + '</td>' + sim.results.map(function (r) {
           var s = r.final[k];
-          var d = k === 'roi' ? 2 : null;
+          var d = k === 'ltv_cac' || k === 'survived' ? 2 : null;
           return '<td><b>' + fmt(s.mean, d) + '</b><span>' + fmt(s.p10, d) + '–' + fmt(s.p90, d) + '</span></td>';
         }).join('') + '</tr>';
       }).join('') + '</tbody></table></div><p class="pg-hint">Среднее по прогонам и коридор p10–p90 (80 % исходов).</p>';
-    out += '<div class="pg-chart-head"><span>Динамика по годам</span><select id="pgChartMetric">' +
-      ['startups', 'licenses', 'exits', 'active', 'stale', 'cost', 'income', 'investments'].map(function (k) {
-        return '<option value="' + k + '"' + (k === state.chartMetric ? ' selected' : '') + '>' + esc(sim.metrics[k]) + '</option>';
+    out += '<div class="pg-chart-head"><span>Динамика по месяцам</span><select id="pgChartMetric">' +
+      Object.keys(SERIES_TITLES).map(function (k) {
+        return '<option value="' + k + '"' + (k === state.chartMetric ? ' selected' : '') + '>' + esc(SERIES_TITLES[k]) + '</option>';
       }).join('') + '</select></div><div id="pgChart"></div>';
-    out += '<div class="pg-chart-head"><span>Портфель в конце горизонта по УГТ (среднее)</span></div><div id="pgLevelsChart"></div>';
     $('pgResults').innerHTML = out;
     $('pgChartMetric').addEventListener('change', function (e) { state.chartMetric = e.target.value; drawLine(); });
     drawLine();
-    drawLevels();
   }
+
+  /* помесячные ряды симуляции (api/runtime/polygons.SERIES) */
+  var SERIES_TITLES = {
+    cash: 'Деньги на счёте, тыс. ₽',
+    alive: 'Доля прогонов без кассового разрыва',
+    customers: 'Клиенты',
+    mrr: 'Выручка в месяц (MRR), тыс. ₽'
+  };
 
   function drawLine() {
     var sim = state.sim;
     var m = state.chartMetric;
     var W = 560, H = 220, L = 48, R = 12, T = 12, B = 28;
-    var years = sim.params.horizon_years;
-    var max = 0;
-    sim.results.forEach(function (r) { r.series[m].forEach(function (s) { max = Math.max(max, s.p90, s.mean); }); });
+    var years = sim.params.horizon_months;
+    var max = 0, min = 0;
+    sim.results.forEach(function (r) { r.series[m].forEach(function (s) { max = Math.max(max, s.p90, s.mean); min = Math.min(min, s.p10, s.mean); }); });
+    if (m === 'alive') { max = 1; min = 0; }
     max = max || 1;
     var x = function (i) { return L + (years === 1 ? (W - L - R) / 2 : i * (W - L - R) / (years - 1)); };
-    var y = function (v) { return T + (H - T - B) * (1 - v / max); };
-    var svg = '<svg class="pg-svg" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(sim.metrics[m]) + ' по годам">';
+    var y = function (v) { return T + (H - T - B) * (1 - (v - min) / (max - min)); };
+    var svg = '<svg class="pg-svg" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(SERIES_TITLES[m]) + ' по месяцам">';
     for (var g = 0; g <= 4; g++) {
-      var gv = max * g / 4;
+      var gv = min + (max - min) * g / 4;
       svg += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(gv) + '" y2="' + y(gv) + '" class="pg-grid"/>' +
         '<text x="' + (L - 6) + '" y="' + (y(gv) + 4) + '" class="pg-axis" text-anchor="end">' + fmt(gv, gv >= 100 ? 0 : 1) + '</text>';
     }
+    if (min < 0) {
+      svg += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(0) + '" y2="' + y(0) + '" class="pg-grid" stroke-dasharray="4 3"/>';
+    }
+    var stepT = years > 24 ? 6 : years > 12 ? 3 : 1;
     for (var t = 0; t < years; t++) {
-      svg += '<text x="' + x(t) + '" y="' + (H - 8) + '" class="pg-axis" text-anchor="middle">' + (t + 1) + '-й год</text>';
+      if ((t + 1) % stepT && t !== 0) continue;
+      svg += '<text x="' + x(t) + '" y="' + (H - 8) + '" class="pg-axis" text-anchor="middle">' + (t + 1) + '</text>';
     }
     sim.results.forEach(function (r, i) {
       var c = COLORS[i % COLORS.length];
@@ -327,31 +335,10 @@
         '" fill="none" stroke="' + c + '" stroke-width="2.5" stroke-linejoin="round"/>';
       s.forEach(function (p, k) {
         svg += '<circle cx="' + x(k) + '" cy="' + y(p.mean) + '" r="3" fill="' + c + '"><title>' + esc(r.name) + ', ' + (k + 1) +
-          '-й год: ' + fmt(p.mean) + ' (' + fmt(p.p10) + '–' + fmt(p.p90) + ')</title></circle>';
+          '-й месяц: ' + fmt(p.mean) + ' (' + fmt(p.p10) + '–' + fmt(p.p90) + ')</title></circle>';
       });
     });
     $('pgChart').innerHTML = svg + '</svg>' + legend();
-  }
-
-  function drawLevels() {
-    var sim = state.sim;
-    var W = 560, H = 170, L = 30, B = 24, T = 8;
-    var max = 0;
-    sim.results.forEach(function (r) { r.levels.forEach(function (v) { max = Math.max(max, v); }); });
-    max = max || 1;
-    var groupW = (W - L) / 9;
-    var barW = Math.max(3, (groupW - 8) / sim.results.length);
-    var svg = '<svg class="pg-svg" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Портфель по УГТ">';
-    for (var lv = 0; lv < 9; lv++) {
-      var gx = L + lv * groupW + 4;
-      sim.results.forEach(function (r, i) {
-        var h = (H - T - B) * r.levels[lv] / max;
-        svg += '<rect x="' + (gx + i * barW) + '" y="' + (H - B - h) + '" width="' + (barW - 1) + '" height="' + h +
-          '" fill="' + COLORS[i % COLORS.length] + '" rx="1.5"><title>' + esc(r.name) + ', УГТ ' + (lv + 1) + ': ' + fmt(r.levels[lv]) + '</title></rect>';
-      });
-      svg += '<text x="' + (gx + groupW / 2 - 4) + '" y="' + (H - 8) + '" class="pg-axis" text-anchor="middle">' + (lv + 1) + '</text>';
-    }
-    $('pgLevelsChart').innerHTML = svg + '</svg>';
   }
 
   function legend() {
@@ -461,8 +448,8 @@
     fresh.description = '';
     fresh.author = '';
     fresh.tags = [];
-    fresh.scenarios = [{ id: 's1', name: 'Моё решение', description: '', valley_boost: 20 }];
-    fresh.hypothesis = { statement: '', metric: 'startups', op: '>=', value: 5, scenario_id: 's1' };
+    fresh.scenarios = [{ id: 's1', name: 'Моё решение', description: '', price_change: 10 }];
+    fresh.hypothesis = { statement: '', metric: 'survived', op: '>=', value: 1, scenario_id: 's1' };
     fresh.idea = '';
     delete fresh.last_panel;
     open(fresh);

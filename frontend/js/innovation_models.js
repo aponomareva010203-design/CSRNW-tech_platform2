@@ -1,26 +1,34 @@
 /* ============================================================
-   «Модели офиса проректора» (models.html, блок #gridBuiltin).
+   «Модели стартапа» (models.html, блок #gridBuiltin).
 
-   Прозрачные демо-модели для решений по инновационному портфелю вуза —
-   считаются в браузере, без LLM и без песочницы:
-     - trl-transition — шанс перехода проекта на следующий УГТ за 12 мес.
-       (логистическая модель, вклад каждого фактора виден в разборе);
-     - irl-score      — уровень инвестиционной готовности стартапа (IRL 1–9)
-       по чек-листу и рекомендуемая мера поддержки;
-     - license-npv    — ожидаемая NPV лицензирования РИД с учётом
-       вероятности сделки, разгона продаж и затрат на поддержание патента.
+   Прозрачные расчётные модели для команды стартапа — считаются в
+   браузере, без LLM и без песочницы:
+     - unit-economics — юнит-экономика: ARPA, маржа, LTV, CAC, LTV/CAC,
+       срок окупаемости CAC, вердикт и главный рычаг;
+     - market-size    — размер рынка TAM / SAM / SOM «снизу вверх»
+       (число клиентов × чек × доли);
+     - runway         — на сколько месяцев хватит денег при росте
+       выручки и расходов, месяц выхода в плюс;
+     - irl-score      — уровень инвестиционной готовности стартапа
+       (IRL 1–9) по чек-листу и рекомендуемая мера поддержки.
 
-   Коэффициенты экспертные (см. COEF ниже): откалибруйте их на истории
-   своего портфеля. Модели доступны и другим страницам как
-   window.AIOS_INNOVATION_MODELS (полигоны берут из них шанс перехода УГТ).
+   Все суммы — тыс. ₽. Ориентиры (LTV/CAC ≥ 3, окупаемость ≤ 12 мес.)
+   — общепринятые эвристики венчурной индустрии, а не закон: обсуждайте
+   их с трекером. Модели доступны и другим страницам как
+   window.AIOS_INNOVATION_MODELS.
    ============================================================ */
 
 (function () {
-  function sigmoid(x) { return 1 / (1 + Math.exp(-x)); }
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
   function n(v, d) { var x = parseFloat(String(v).replace(',', '.')); return isNaN(x) ? d : x; }
   function fmt(v, digits) {
     return Number(v).toLocaleString('ru-RU', { maximumFractionDigits: digits == null ? 1 : digits });
+  }
+  function money(th) {
+    var a = Math.abs(th);
+    if (a >= 1000000) return fmt(th / 1000000, 2) + ' млрд ₽';
+    if (a >= 1000) return fmt(th / 1000, 2) + ' млн ₽';
+    return fmt(th, 1) + ' тыс. ₽';
   }
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -28,40 +36,71 @@
     });
   }
 
-  /* ---------- 1. Шанс перехода на следующий УГТ ---------- */
+  /* ---------- 1. Юнит-экономика ---------- */
 
-  var COEF = {
-    // базовый логит по уровню: УГТ 3–5 — «долина смерти» вузовских технологий
-    level: { 1: 0.1, 2: 0.0, 3: -0.4, 4: -0.8, 5: -0.9, 6: -0.5, 7: -0.6, 8: -0.9 },
-    stale: -0.45,        // за каждый год на уровне сверх первого
-    team: 0.08,          // за каждого участника (до 8)
-    entrepreneur: 0.7,   // в команде есть предприниматель / CEO
-    partner: 0.9,        // есть индустриальный партнёр / заказчик
-    budget: 0.6,         // × ln(1 + бюджет, млн ₽/год)
-    ip: 0.3,             // РИД охраняется (патент / ПО / ноу-хау)
-    custdev: 0.4         // проведены интервью с клиентами / есть LOI
-  };
-
-  function trlTransition(x) {
-    var level = clamp(Math.round(n(x.trl, 4)), 1, 8);
-    var years = Math.max(0, n(x.years, 1));
-    var team = clamp(n(x.team, 3), 0, 30);
-    var budget = Math.max(0, n(x.budget, 2));
-    var parts = [
-      ['Базовый шанс для УГТ ' + level, COEF.level[level]],
-      ['Срок на текущем уровне (' + fmt(years) + ' г.)', COEF.stale * Math.max(0, years - 1)],
-      ['Команда (' + fmt(team, 0) + ' чел.)', COEF.team * Math.min(team, 8)],
-      ['Предприниматель в команде', x.entrepreneur ? COEF.entrepreneur : 0],
-      ['Индустриальный партнёр', x.partner ? COEF.partner : 0],
-      ['Бюджет ' + fmt(budget) + ' млн ₽/год', COEF.budget * Math.log(1 + budget)],
-      ['Охраняемый РИД', x.ip ? COEF.ip : 0],
-      ['Подтверждён спрос (CustDev / LOI)', x.custdev ? COEF.custdev : 0]
-    ];
-    var logit = parts.reduce(function (s, p) { return s + p[1]; }, 0) - 1.2;
-    return { p: sigmoid(logit), parts: parts, level: level, years: years };
+  function unitEconomics(x) {
+    var price = Math.max(0, n(x.price, 4.5));          // цена единицы в месяц, тыс. ₽
+    var units = Math.max(0, n(x.units, 40));           // единиц на клиента
+    var cogs = Math.max(0, n(x.cogs, 1.7));            // себестоимость единицы в месяц, тыс. ₽
+    var cac = Math.max(0, n(x.cac, 380));
+    var life = Math.max(0, n(x.life, 36));             // срок жизни клиента, мес.
+    var arpa = price * units;
+    var margin = (price - cogs) * units;
+    var ltv = margin * life;
+    var ratio = cac > 0 ? ltv / cac : Infinity;
+    var payback = margin > 0 ? cac / margin : Infinity;
+    /* какой рычаг сильнее: +10 % к каждому фактору */
+    var levers = [
+      ['Цена +10 %', ((price * 1.1 - cogs) * units * life) / cac],
+      ['Себестоимость −10 %', ((price - cogs * 0.9) * units * life) / cac],
+      ['CAC −10 %', ltv / (cac * 0.9)],
+      ['Срок жизни клиента +10 %', margin * life * 1.1 / cac],
+      ['Единиц на клиента +10 %', (price - cogs) * units * 1.1 * life / cac]
+    ].map(function (l) { return [l[0], l[1] - ratio]; })
+      .sort(function (a, b) { return b[1] - a[1]; });
+    return { arpa: arpa, margin: margin, gm: arpa ? margin / arpa : 0, ltv: ltv, cac: cac, ratio: ratio, payback: payback, levers: levers };
   }
 
-  /* ---------- 2. Инвестиционная готовность (IRL) ---------- */
+  /* ---------- 2. Размер рынка ---------- */
+
+  function marketSize(x) {
+    var clients = Math.max(0, n(x.clients, 6600));     // всех потенциальных клиентов
+    var check = Math.max(0, n(x.check, 900));          // средний чек в год, тыс. ₽
+    var samShare = clamp(n(x.sam_share, 40), 0, 100) / 100;  // доля, доступная нашему продукту и каналу
+    var somShare = clamp(n(x.som_share, 2), 0, 100) / 100;   // доля SAM, реальная за 3 года
+    var tam = clients * check;
+    var sam = tam * samShare;
+    var som = sam * somShare;
+    var somClients = clients * samShare * somShare;
+    return { tam: tam, sam: sam, som: som, somClients: somClients };
+  }
+
+  /* ---------- 3. Runway ---------- */
+
+  function runway(x) {
+    var cash = Math.max(0, n(x.cash, 4200));
+    var costs = Math.max(0, n(x.costs, 650));
+    var costGrowth = n(x.cost_growth, 2) / 100;
+    var revenue = Math.max(0, n(x.revenue, 180));
+    var revGrowth = n(x.rev_growth, 12) / 100;
+    var gm = clamp(n(x.gm, 62), -100, 100) / 100;
+    var inflow = Math.max(0, n(x.inflow, 0));
+    var inflowMonth = Math.round(n(x.inflow_month, 0));
+    var flows = [];
+    var left = cash, zero = null, breakeven = null;
+    for (var m = 1; m <= 36; m++) {
+      var net = revenue * gm - costs + (inflow && m === inflowMonth ? inflow : 0);
+      left += net;
+      flows.push(left);
+      if (breakeven === null && revenue * gm >= costs) breakeven = m;
+      if (zero === null && left < 0) zero = m;
+      revenue *= 1 + revGrowth;
+      costs *= 1 + costGrowth;
+    }
+    return { flows: flows, zero: zero, breakeven: breakeven };
+  }
+
+  /* ---------- 4. Инвестиционная готовность (IRL) ---------- */
 
   var IRL_ITEMS = [
     ['team', 'Сформирована команда (CEO + CTO)', 1],
@@ -72,13 +111,13 @@
     ['model', 'Посчитана бизнес-модель и юнит-экономика', 1],
     ['sales', 'Есть первые продажи', 1],
     ['repeat', 'Повторные продажи, CAC < LTV', 1],
-    ['ip', 'Права на РИД оформлены на компанию (лицензия вуза)', 0.5],
+    ['ip', 'Права на технологию оформлены на компанию (лицензия вуза)', 0.5],
     ['company', 'Зарегистрировано юрлицо', 0.5],
     ['docs', 'Готовы питч-дек, финмодель, cap table', 1]
   ];
   var IRL_MEASURES = [
     [2, 'Предакселератор вуза, «Студенческий стартап» / «УМНИК» Фонда содействия инновациям'],
-    [4, 'Стартап-студия: трек CustDev и MVP; «Студенческий стартап» для студенческих команд'],
+    [4, 'Акселератор или стартап-студия: трек CustDev и MVP; «Студенческий стартап» для студенческих команд'],
     [6, '«Старт» Фонда содействия инновациям, пилот с индустриальным партнёром'],
     [8, 'Посевные фонды, бизнес-ангелы, корпоративные акселераторы'],
     [9, 'Венчурные фонды, «Развитие» / «Коммерциализация» Фонда содействия инновациям']
@@ -86,7 +125,7 @@
 
   function irlScore(x) {
     // уровень = число последовательно выполненных шагов лестницы (как в шкале IRL),
-    // юрлицо и права на РИД — поправки ±0,5
+    // юрлицо и права на технологию — поправки +0,5
     var ladder = ['team', 'segment', 'interviews', 'mvp', 'pilot', 'model', 'sales', 'repeat', 'docs'];
     var level = 0;
     for (var i = 0; i < ladder.length; i++) {
@@ -99,107 +138,124 @@
     return { irl: irl, measure: measure[1], gaps: gaps.slice(0, 4) };
   }
 
-  /* ---------- 3. NPV лицензирования РИД ---------- */
-
-  function licenseNpv(x) {
-    var revenue = Math.max(0, n(x.revenue, 50));       // выручка лицензиата на зрелости, млн ₽/год
-    var royalty = clamp(n(x.royalty, 3), 0, 50) / 100;
-    var lag = clamp(Math.round(n(x.lag, 2)), 0, 10);   // лет до первых продаж
-    var ramp = clamp(Math.round(n(x.ramp, 3)), 1, 10); // лет разгона продаж
-    var term = clamp(Math.round(n(x.term, 10)), 1, 20);
-    var prob = clamp(n(x.prob, 40), 0, 100) / 100;
-    var rate = clamp(n(x.rate, 15), 0, 60) / 100;
-    var lump = Math.max(0, n(x.lump, 0.5));            // паушальный платёж, млн ₽
-    var upkeep = Math.max(0, n(x.upkeep, 60)) / 1000;  // поддержание патента, тыс. → млн ₽/год
-    var flows = [];
-    var npv = 0;
-    for (var t = 0; t < term; t++) {
-      var share = t < lag ? 0 : Math.min(1, (t - lag + 1) / ramp);
-      var cash = prob * (revenue * share * royalty + (t === 0 ? lump : 0)) - upkeep;
-      flows.push(cash);
-      npv += cash / Math.pow(1 + rate, t + 1);
-    }
-    var total = flows.reduce(function (s, c) { return s + c; }, 0);
-    return { npv: npv, flows: flows, total: total };
-  }
-
-  window.AIOS_INNOVATION_MODELS = { trlTransition: trlTransition, irlScore: irlScore, licenseNpv: licenseNpv };
+  window.AIOS_INNOVATION_MODELS = { unitEconomics: unitEconomics, marketSize: marketSize, runway: runway, irlScore: irlScore };
 
   /* ---------- описания форм ---------- */
 
+  function bars(values, title) {
+    var max = Math.max.apply(null, values.map(function (f) { return Math.abs(f); }).concat([0.001]));
+    return '<div class="imdl-bars" aria-label="' + esc(title) + '">' + values.map(function (f, i) {
+      var h = Math.round(Math.abs(f) / max * 56);
+      return '<span class="imdl-bar' + (f < 0 ? ' imdl-bar--neg' : '') + '" style="height:' + Math.max(2, h) +
+        'px" title="Месяц ' + (i + 1) + ': ' + esc(money(f)) + '"></span>';
+    }).join('') + '</div>';
+  }
+
+  function rows(list) {
+    return '<table class="imdl-parts"><tbody>' + list.map(function (r) {
+      return '<tr><td>' + esc(r[0]) + '</td><td><b>' + esc(r[1]) + '</b></td></tr>';
+    }).join('') + '</tbody></table>';
+  }
+
   var MODELS = [
     {
-      id: 'trl-transition',
-      name: 'Шанс перехода проекта на следующий УГТ',
-      kind: 'портфель',
-      out: 'Вероятность перехода за 12 месяцев',
-      desc: 'Логистическая модель по факторам, которые эксперты стартап-студий называют решающими: срок «застоя», команда, партнёр, бюджет, спрос.',
+      id: 'unit-economics',
+      name: 'Юнит-экономика',
+      kind: 'экономика',
+      out: 'LTV, CAC, LTV/CAC, окупаемость клиента',
+      desc: 'Зарабатываем ли мы на одном клиенте: маржа с клиента, пожизненная ценность (LTV), стоимость привлечения (CAC) и какой рычаг улучшит экономику сильнее всего. Суммы — тыс. ₽.',
       fields: [
-        ['trl', 'Текущий УГТ (1–8)', 'number', 4],
-        ['years', 'Лет на текущем уровне', 'number', 1.5],
-        ['team', 'Размер команды, чел.', 'number', 4],
-        ['budget', 'Бюджет на год, млн ₽', 'number', 3],
-        ['entrepreneur', 'В команде есть предприниматель / CEO', 'bool', false],
-        ['partner', 'Есть индустриальный партнёр', 'bool', true],
-        ['ip', 'РИД охраняется', 'bool', true],
-        ['custdev', 'Спрос подтверждён (интервью, LOI)', 'bool', false]
+        ['price', 'Цена единицы в месяц, тыс. ₽', 'number', 4.5],
+        ['units', 'Единиц на клиента (агрегатов, мест, лицензий)', 'number', 40],
+        ['cogs', 'Себестоимость единицы в месяц, тыс. ₽', 'number', 1.7],
+        ['cac', 'CAC — затраты на привлечение одного клиента, тыс. ₽', 'number', 380],
+        ['life', 'Срок жизни клиента, мес.', 'number', 36]
       ],
       render: function (x) {
-        var r = trlTransition(x);
-        var pct = Math.round(r.p * 100);
-        var verdict = r.years >= 2 && pct < 35
-          ? 'Кандидат на пересмотр: два года и больше на одном УГТ при низком шансе роста — обсудите закрытие, лицензирование или смену команды.'
-          : pct >= 60 ? 'Проект в хорошей динамике: держите ресурсы и готовьте следующую контрольную точку.'
-            : 'Средний шанс: усилите самый весомый недостающий фактор из разбора ниже.';
-        return '<div class="imdl-result"><b>' + pct + ' %</b><span>шанс перейти на УГТ ' + (r.level + 1) + ' за 12 месяцев</span></div>' +
-          '<p class="imdl-verdict">' + esc(verdict) + '</p>' + partsTable(r.parts);
+        var r = unitEconomics(x);
+        var verdict = r.ratio >= 3 && r.payback <= 12
+          ? 'Экономика сходится: можно вкладываться в привлечение клиентов. Убедитесь, что срок жизни и CAC — факт, а не гипотеза.'
+          : r.ratio >= 1
+            ? 'Клиент окупается, но медленно или с малым запасом. Начните с самого сильного рычага из списка ниже.'
+            : 'Каждый новый клиент приносит убыток: масштабировать продажи рано — пересмотрите цену, себестоимость или канал.';
+        return '<div class="imdl-result"><b>' + (isFinite(r.ratio) ? fmt(r.ratio, 1) : '∞') + '</b><span>LTV / CAC (ориентир ≥ 3)</span></div>' +
+          '<p class="imdl-verdict">' + esc(verdict) + '</p>' +
+          rows([
+            ['Выручка с клиента в месяц (ARPA)', money(r.arpa)],
+            ['Маржа с клиента в месяц', money(r.margin) + ' (' + fmt(r.gm * 100, 0) + ' %)'],
+            ['LTV', money(r.ltv)],
+            ['CAC', money(r.cac)],
+            ['Окупаемость CAC', isFinite(r.payback) ? fmt(r.payback, 1) + ' мес. (ориентир ≤ 12)' : 'не окупается']
+          ]) +
+          '<p class="imdl-verdict"><b>Рычаги (+10 % к фактору → изменение LTV/CAC):</b> ' +
+          esc(r.levers.slice(0, 3).map(function (l) { return l[0] + ' (' + (l[1] >= 0 ? '+' : '') + fmt(l[1], 2) + ')'; }).join('; ')) + '</p>';
+      }
+    },
+    {
+      id: 'market-size',
+      name: 'Размер рынка TAM / SAM / SOM',
+      kind: 'рынок',
+      out: 'TAM, SAM, SOM и число клиентов в SOM',
+      desc: 'Оценка «снизу вверх»: число потенциальных клиентов × средний чек в год, затем доля, доступная вашему продукту и каналу (SAM), и реалистичная доля за 3 года (SOM). Суммы — тыс. ₽.',
+      fields: [
+        ['clients', 'Потенциальных клиентов всего (компаний или людей)', 'number', 6600],
+        ['check', 'Средний чек клиента в год, тыс. ₽', 'number', 900],
+        ['sam_share', 'Доля, доступная нашему продукту и каналу (SAM), %', 'number', 40],
+        ['som_share', 'Доля SAM, реально достижимая за 3 года (SOM), %', 'number', 2]
+      ],
+      render: function (x) {
+        var r = marketSize(x);
+        var max = r.tam || 1;
+        var bar = function (label, v, cls) {
+          var w = v > 0 ? Math.max(3, Math.log10(1 + v) / Math.log10(1 + max) * 100) : 0;
+          return '<div class="mkt-row"><div class="mkt-label"><b>' + label + '</b><span>' + esc(money(v)) + ' в год</span></div>' +
+            '<div class="mkt-track"><span class="mkt-bar mkt-bar--' + cls + '" style="width:' + w + '%"></span></div></div>';
+        };
+        return '<div class="imdl-result"><b>' + esc(money(r.som)) + '</b><span>SOM — ' + fmt(r.somClients, 0) + ' клиентов за 3 года</span></div>' +
+          '<div class="mkt">' + bar('TAM', r.tam, 'tam') + bar('SAM', r.sam, 'sam') + bar('SOM', r.som, 'som') + '</div>' +
+          '<p class="imdl-verdict">Проверьте каждое допущение: число клиентов — по Росстату, реестрам ФНС или отраслевым ассоциациям; чек — по интервью и ценам альтернатив; долю SOM — по силам вашей команды продаж. Длина полос — логарифмическая шкала.</p>';
+      }
+    },
+    {
+      id: 'runway',
+      name: 'Runway: на сколько хватит денег',
+      kind: 'финансы',
+      out: 'Месяц кассового разрыва и выхода в плюс',
+      desc: 'Помесячный прогноз остатка денег на 36 месяцев: выручка растёт, расходы растут, грант или инвестиции приходят в заданный месяц. Суммы — тыс. ₽.',
+      fields: [
+        ['cash', 'Деньги на счёте сейчас, тыс. ₽', 'number', 4200],
+        ['costs', 'Расходы в месяц сейчас, тыс. ₽', 'number', 650],
+        ['cost_growth', 'Рост расходов, % в месяц', 'number', 2],
+        ['revenue', 'Выручка в месяц сейчас, тыс. ₽', 'number', 180],
+        ['rev_growth', 'Рост выручки, % в месяц', 'number', 12],
+        ['gm', 'Валовая маржа, %', 'number', 62],
+        ['inflow', 'Грант или инвестиции, тыс. ₽ (0 — нет)', 'number', 0],
+        ['inflow_month', 'Месяц поступления', 'number', 7]
+      ],
+      render: function (x) {
+        var r = runway(x);
+        var head = r.zero
+          ? '<div class="imdl-result"><b>' + r.zero + ' мес.</b><span>до кассового разрыва</span></div>'
+          : '<div class="imdl-result"><b>36+ мес.</b><span>деньги не заканчиваются</span></div>';
+        var verdict = r.zero
+          ? (r.zero <= 6 ? 'Меньше полугода: начинайте привлечение денег прямо сейчас и сокращайте расходы.' : 'Начинайте привлечение за 6 месяцев до кассового разрыва — раунд или грант обычно занимает 3–6 месяцев.')
+          : 'При этих допущениях запас есть. Проверьте, что рост выручки опирается на воронку продаж, а не на надежду.';
+        return head + bars(r.flows, 'Остаток денег по месяцам') +
+          '<p class="imdl-verdict">' + esc(verdict) + ' ' + (r.breakeven ? 'Валовая прибыль покроет расходы на ' + r.breakeven + '-м месяце.' : 'В горизонте 36 месяцев валовая прибыль не покрывает расходы.') + '</p>';
       }
     },
     {
       id: 'irl-score',
       name: 'Инвестиционная готовность стартапа (IRL)',
-      kind: 'стартапы',
+      kind: 'финансирование',
       out: 'IRL 1–9 и следующая мера поддержки',
-      desc: 'Лестница IRL из методики стартап-студии: уровень растёт, только если пройдены все предыдущие шаги. Подсказывает, куда направить команду.',
+      desc: 'Лестница IRL из методики стартап-студии: уровень растёт, только если пройдены все предыдущие шаги. Подсказывает, какая поддержка подходит сейчас.',
       fields: IRL_ITEMS.map(function (it, i) { return [it[0], it[1], 'bool', i < 3]; }),
       render: function (x) {
         var r = irlScore(x);
         return '<div class="imdl-result"><b>IRL ' + r.irl + '</b><span>уровень инвестиционной готовности</span></div>' +
-          '<p class="imdl-verdict"><b>Куда направить:</b> ' + esc(r.measure) + '</p>' +
+          '<p class="imdl-verdict"><b>Куда идти сейчас:</b> ' + esc(r.measure) + '</p>' +
           (r.gaps.length ? '<p class="imdl-verdict"><b>Чего не хватает:</b> ' + esc(r.gaps.join('; ')) + '</p>' : '');
-      }
-    },
-    {
-      id: 'license-npv',
-      name: 'NPV лицензирования РИД',
-      kind: 'трансфер',
-      out: 'Ожидаемая приведённая стоимость, млн ₽',
-      desc: 'Сколько стоит лицензионная сделка для вуза: роялти с выручки лицензиата, паушальный платёж, вероятность успеха, пошлины на патент, дисконт.',
-      fields: [
-        ['revenue', 'Выручка лицензиата на зрелости, млн ₽/год', 'number', 80],
-        ['royalty', 'Роялти, %', 'number', 3],
-        ['lump', 'Паушальный платёж, млн ₽', 'number', 0.5],
-        ['lag', 'Лет до первых продаж', 'number', 2],
-        ['ramp', 'Лет разгона продаж до зрелости', 'number', 3],
-        ['term', 'Срок лицензии, лет', 'number', 10],
-        ['prob', 'Вероятность, что продукт выйдет на рынок, %', 'number', 40],
-        ['upkeep', 'Поддержание патента, тыс. ₽/год', 'number', 60],
-        ['rate', 'Ставка дисконтирования, %', 'number', 15]
-      ],
-      render: function (x) {
-        var r = licenseNpv(x);
-        var max = Math.max.apply(null, r.flows.map(function (f) { return Math.abs(f); }).concat([0.001]));
-        var bars = r.flows.map(function (f, i) {
-          var h = Math.round(Math.abs(f) / max * 56);
-          return '<span class="imdl-bar' + (f < 0 ? ' imdl-bar--neg' : '') + '" style="height:' + Math.max(2, h) +
-            'px" title="Год ' + (i + 1) + ': ' + fmt(f, 2) + ' млн ₽"></span>';
-        }).join('');
-        var verdict = r.npv > 0
-          ? 'Сделка выгодна вузу при этих допущениях. Проверьте чувствительность к вероятности и сроку до продаж.'
-          : 'При этих допущениях патент обходится дороже ожидаемого дохода: рассмотрите отчуждение, вклад в МТК или отказ от поддержания.';
-        return '<div class="imdl-result"><b>' + fmt(r.npv, 2) + ' млн ₽</b><span>ожидаемая NPV (сумма потоков ' + fmt(r.total, 2) + ' млн ₽)</span></div>' +
-          '<div class="imdl-bars" aria-label="Ожидаемый денежный поток по годам">' + bars + '</div>' +
-          '<p class="imdl-verdict">' + esc(verdict) + '</p>';
       }
     }
   ];

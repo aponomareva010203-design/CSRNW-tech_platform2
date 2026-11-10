@@ -1,4 +1,4 @@
-"""Витрина механизмов поддержки, агент «Оценщик ИА», новые базы знаний и
+"""Витрина механизмов поддержки, агент «Навигатор мер поддержки», базы знаний стартапа и
 скрипт запуска scripts/launch.py (выбор браузера, порт)."""
 
 import json
@@ -59,11 +59,20 @@ def test_ip_asset_rag_search():
     assert hits and hits[0]["filename"] == "04_put_k_mtk.md"
 
 
-def test_ip_asset_evaluator_is_suggested():
+def test_support_navigator_is_suggested():
     from api.runtime import datarepo
 
-    found = datarepo.suggest_skills("помоги сформировать методику оценки интеллектуальных активов вуза")
-    assert found and found[0]["id"] == "ip-asset-evaluator"
+    found = datarepo.suggest_skills("какие меры поддержки стартапа подходят студенческой команде")
+    assert found and found[0]["id"] == "support-navigator"
+
+
+def test_startup_rag_search():
+    hits = text_search.search("rag-1a0e5c0108", "наводящие вопросы проблемное интервью о прошлом", limit=3)
+    assert hits and hits[0]["filename"] == "02_problemnoe_intervyu.md"
+    hits = text_search.search("rag-1a0e5c0109", "LTV CAC окупаемость маржа с клиента", limit=3)
+    assert hits and hits[0]["filename"] == "01_yunit_ekonomika.md"
+    hits = text_search.search("rag-1a0e5c0105", "TAM SAM SOM снизу вверх", limit=3)
+    assert hits and hits[0]["filename"] == "01_tam_sam_som.md"
 
 
 def test_launch_menu_answer():

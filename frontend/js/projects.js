@@ -47,10 +47,10 @@
 
   /* ---------- карточка в сетке ---------- */
 
-  /* два типа проектов платформы проректора (api/runtime/projects.PROJECT_TYPES) */
+  /* два типа проектов команды стартапа (api/runtime/projects.PROJECT_TYPES) */
   var TYPE_TITLES = {
-    startup: 'Технологический проект / стартап',
-    initiative: 'Управленческая инициатива'
+    startup: 'Стартап',
+    initiative: 'Рабочая задача / эксперимент'
   };
 
   var FIELD_TITLES = {
@@ -58,23 +58,24 @@
     project_type: 'Тип проекта',
     goal: 'Цель',
     description: 'Описание',
-    technology: 'Технология и РИД',
+    technology: 'Технология и права на неё',
     trl: 'Уровень готовности (УГТ)',
-    market: 'Рынок и клиент',
+    market: 'Клиент, проблема и рынок',
+    business_model: 'Бизнес-модель и юнит-экономика',
     funding_stage: 'Стадия финансирования',
     commercialization: 'Путь на рынок',
-    kpi: 'Целевые показатели (KPI)',
+    kpi: 'Показатели успеха',
     milestones: 'Этапы и контрольные точки',
     risks: 'Риски',
     team_size: 'Участников',
     participants: 'Состав команды (ФИО)',
-    departments: 'Подразделения',
+    departments: 'Вуз, лаборатория, акселератор',
     budget: 'Бюджет',
     groundwork: 'Задел',
     presentation: 'Презентация'
   };
 
-  var TYPED_FIELDS = ['technology', 'trl', 'market', 'funding_stage', 'commercialization', 'kpi', 'milestones', 'risks'];
+  var TYPED_FIELDS = ['technology', 'trl', 'market', 'business_model', 'funding_stage', 'commercialization', 'kpi', 'milestones', 'risks'];
 
   var LIST_TITLES = {
     groundwork_links: 'Ссылки задела',
@@ -678,19 +679,20 @@
   var EDIT_FIELDS = [
     ['title', 'Название', 'input'],
     ['project_type', 'Тип проекта', 'select'],
-    ['goal', 'Цель (SMART)', 'textarea'],
+    ['goal', 'Цель на 3–12 месяцев (SMART)', 'textarea'],
     ['description', 'Описание', 'textarea'],
-    ['technology', 'Технология и РИД (стартап)', 'textarea'],
+    ['technology', 'Технология и права на неё: патент, ПО, ноу-хау, лицензия вуза (стартап)', 'textarea'],
     ['trl', 'УГТ 1–9 (стартап)', 'input'],
-    ['market', 'Рынок, клиент, подтверждение спроса (стартап)', 'textarea'],
-    ['funding_stage', 'Стадия финансирования (стартап)', 'input'],
-    ['commercialization', 'Путь на рынок: лицензия, МТК, стартап (стартап)', 'input'],
-    ['kpi', 'Целевые показатели (инициатива)', 'textarea'],
+    ['market', 'Клиент, проблема, рынок, подтверждение спроса (стартап)', 'textarea'],
+    ['business_model', 'Бизнес-модель: за что и сколько платит клиент, CAC, маржа (стартап)', 'textarea'],
+    ['funding_stage', 'Стадия финансирования: свои деньги, грант ФСИ, акселератор, pre-seed (стартап)', 'input'],
+    ['commercialization', 'Путь на рынок: продажи, пилот с индустрией, партнёр-интегратор (стартап)', 'input'],
+    ['kpi', 'Показатели успеха (задача)', 'textarea'],
     ['milestones', 'Этапы и контрольные точки', 'textarea'],
     ['risks', 'Риски', 'textarea'],
     ['team_size', 'Количество участников', 'input'],
     ['participants', 'ФИО участников', 'textarea'],
-    ['departments', 'Структурные подразделения', 'input'],
+    ['departments', 'Вуз, лаборатория, акселератор', 'input'],
     ['budget', 'Бюджет запуска', 'input'],
     ['groundwork', 'Задел (публикации, патенты и т.п.)', 'textarea'],
     ['groundwork_links', 'Ссылки задела (по одной на строку)', 'textarea']

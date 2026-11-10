@@ -7,7 +7,7 @@
       "provider": "Qwen",
       "model_id": "Qwen/Qwen2.5-7B-Instruct",
       "image_url": "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/Qwen/Qwen2.5-7B-Instruct.png",
-      "description_ru": "Универсальная LLM с хорошим русским: основа агентов проректора — сводки по портфелю, разбор заявок, черновики писем и регламентов.",
+      "description_ru": "Универсальная LLM с хорошим русским: основа агентов команды — разбор интервью, черновики писем клиентам, заявок и питча.",
       "tags": [
         "LLM",
         "агенты",
@@ -23,7 +23,7 @@
       "provider": "Qwen",
       "model_id": "Qwen/Qwen3-8B",
       "image_url": "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/Qwen/Qwen3-8B.png",
-      "description_ru": "LLM с режимом рассуждений: анализ бизнес-моделей стартапов, экспертиза проектов по чек-листу, ИИ-эксперты полигона.",
+      "description_ru": "LLM с режимом рассуждений: анализ бизнес-модели и юнит-экономики, разбор гипотез, ИИ-эксперты фокус-группы полигона.",
       "tags": [
         "LLM",
         "рассуждения",
@@ -39,7 +39,7 @@
       "provider": "T-Tech",
       "model_id": "t-tech/T-lite-it-1.0",
       "image_url": "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/t-tech/T-lite-it-1.0.png",
-      "description_ru": "Русскоязычная LLM на базе Qwen: деловые тексты, ответы по RAG-базам нормативки, работа с инструментами.",
+      "description_ru": "Русскоязычная LLM на базе Qwen: деловые тексты, ответы по базам знаний о рынке и мерах поддержки, работа с инструментами.",
       "tags": [
         "LLM",
         "русский язык",
@@ -55,7 +55,7 @@
       "provider": "T-Tech",
       "model_id": "t-tech/T-pro-it-1.0",
       "image_url": "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/t-tech/T-pro-it-1.0.png",
-      "description_ru": "Крупная русскоязычная LLM для сложных задач: аналитические записки, отчёты по программе развития, due diligence.",
+      "description_ru": "Крупная русскоязычная LLM для сложных задач: аналитические записки о рынке, заявки на гранты, подготовка к due diligence.",
       "tags": [
         "LLM",
         "аналитика",
@@ -71,7 +71,7 @@
       "provider": "Yandex",
       "model_id": "yandex/YandexGPT-5-Lite-8B-instruct",
       "image_url": "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/yandex/YandexGPT-5-Lite-8B-instruct.png",
-      "description_ru": "Открытая версия YandexGPT 5 Lite: суммаризация протоколов, ответы на вопросы команд стартапов, классификация обращений.",
+      "description_ru": "Открытая версия YandexGPT 5 Lite: суммаризация интервью и встреч, ответы на вопросы клиентов, классификация обращений.",
       "tags": [
         "LLM",
         "русский язык"
@@ -118,7 +118,7 @@
       "provider": "BAAI",
       "model_id": "BAAI/bge-m3",
       "image_url": "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/BAAI/bge-m3.png",
-      "description_ru": "Мультиязычные эмбеддинги для RAG: поиск по положениям, договорам и заявкам, длинные документы до 8192 токенов.",
+      "description_ru": "Мультиязычные эмбеддинги для RAG: поиск по интервью, отраслевым отчётам, договорам и условиям грантов, длинные документы до 8192 токенов.",
       "tags": [
         "эмбеддинги",
         "RAG",
@@ -150,7 +150,7 @@
       "provider": "deepvk",
       "model_id": "deepvk/USER-bge-m3",
       "image_url": "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/deepvk/USER-bge-m3.png",
-      "description_ru": "BGE-M3, дообученная для русского: точнее находит близкие по смыслу заявки, РИД и проекты.",
+      "description_ru": "BGE-M3, дообученная для русского: точнее находит близкие по смыслу цитаты клиентов, заявки и документы.",
       "tags": [
         "эмбеддинги",
         "русский язык",
@@ -166,7 +166,7 @@
       "provider": "intfloat",
       "model_id": "intfloat/multilingual-e5-large",
       "image_url": "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/intfloat/multilingual-e5-large.png",
-      "description_ru": "Эмбеддинги для поиска и кластеризации: группировка РИД по направлениям, подбор экспертов к заявкам.",
+      "description_ru": "Эмбеддинги для поиска и кластеризации: группировка проблем клиентов из интервью, сегментация отзывов.",
       "tags": [
         "эмбеддинги",
         "кластеризация"
@@ -212,7 +212,7 @@
       "provider": "AI Growth Lab",
       "model_id": "AI-Growth-Lab/PatentSBERTa",
       "image_url": "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/AI-Growth-Lab/PatentSBERTa.png",
-      "description_ru": "Эмбеддинги патентных текстов: поиск аналогов, близость РИД вуза к патентам компаний, подбор лицензиатов.",
+      "description_ru": "Эмбеддинги патентных текстов: поиск аналогов, патентный ландшафт конкурентов, проверка свободы действий (первичная).",
       "tags": [
         "патенты",
         "РИД",
@@ -228,7 +228,7 @@
       "provider": "Allen AI",
       "model_id": "allenai/specter2_base",
       "image_url": "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/allenai/specter2_base.png",
-      "description_ru": "Эмбеддинги научных статей: карта компетенций вуза, поиск исследователей под запрос индустрии.",
+      "description_ru": "Эмбеддинги научных статей: поиск исследований и экспертов по технологии стартапа, анализ научного задела конкурентов.",
       "tags": [
         "наука",
         "публикации",
@@ -244,7 +244,7 @@
       "provider": "cointegrated",
       "model_id": "cointegrated/rubert-tiny2",
       "image_url": "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/cointegrated/rubert-tiny2.png",
-      "description_ru": "Маленький BERT для русского: классификация заявок и обращений, быстрые эмбеддинги на CPU.",
+      "description_ru": "Маленький BERT для русского: классификация отзывов и обращений клиентов, быстрые эмбеддинги на CPU.",
       "tags": [
         "классификация",
         "русский язык",
@@ -260,7 +260,7 @@
       "provider": "MoritzLaurer",
       "model_id": "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli",
       "image_url": "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/MoritzLaurer/mDeBERTa-v3-base-mnli-xnli.png",
-      "description_ru": "Классификация без обучения (zero-shot): разметка заявок по технологическим направлениям и мерам поддержки.",
+      "description_ru": "Классификация без обучения (zero-shot): разметка заметок интервью по типам проблем и гипотезам.",
       "tags": [
         "zero-shot",
         "классификация"
@@ -275,7 +275,7 @@
       "provider": "Amazon",
       "model_id": "amazon/chronos-bolt-base",
       "image_url": "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/amazon/chronos-bolt-base.png",
-      "description_ru": "Прогноз временных рядов без обучения: доходы от лицензий, внебюджет, число заявок по месяцам.",
+      "description_ru": "Прогноз временных рядов без обучения: выручка, заявки, использование продукта по месяцам.",
       "tags": [
         "прогноз",
         "временные ряды",
@@ -291,7 +291,7 @@
       "provider": "Google",
       "model_id": "google/timesfm-1.0-200m",
       "image_url": "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/google/timesfm-1.0-200m.png",
-      "description_ru": "Фундаментальная модель прогнозирования рядов: сценарии KPI офиса проректора на 1–3 года.",
+      "description_ru": "Фундаментальная модель прогнозирования рядов: сценарии выручки и спроса стартапа на 1–3 года.",
       "tags": [
         "прогноз",
         "временные ряды"
@@ -306,7 +306,7 @@
       "provider": "IlyaGusev",
       "model_id": "IlyaGusev/mbart_ru_sum_gazeta",
       "image_url": "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/IlyaGusev/mbart_ru_sum_gazeta.png",
-      "description_ru": "Суммаризация русских текстов: краткие выжимки отчётов стартапов и заявок для экспертного совета.",
+      "description_ru": "Суммаризация русских текстов: краткие выжимки отраслевых отчётов, статей и длинных интервью.",
       "tags": [
         "суммаризация",
         "русский язык"
@@ -321,7 +321,7 @@
       "provider": "OpenAI",
       "model_id": "openai/whisper-large-v3-turbo",
       "image_url": "https://cdn-thumbnails.huggingface.co/social-thumbnails/models/openai/whisper-large-v3-turbo.png",
-      "description_ru": "Распознавание речи: протоколы экспертных советов, демо-дней и интервью CustDev из аудиозаписей.",
+      "description_ru": "Распознавание речи: расшифровка CustDev-интервью, встреч с клиентами и выступлений на демо-днях.",
       "tags": [
         "речь",
         "протоколы",
