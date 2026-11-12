@@ -62,6 +62,16 @@ def get_skill(skill_id) -> dict | None:
     return next((s for s in skills() if s.get("id") == skill_id), None)
 
 
+# Категория агентов для компаний-заказчиков (data/skills.json): аккаунт компании
+# запускает только их, агенты команды стартапа ему недоступны.
+COMPANY_CATEGORY = "company"
+
+
+def is_company_skill(skill_id) -> bool:
+    skill = get_skill(skill_id)
+    return bool(skill) and skill.get("category") == COMPANY_CATEGORY
+
+
 def skill_path(skill: dict) -> Path | None:
     """Путь к .md-файлу навыка внутри data/ (file_url вида /data/… или
     стандартное место data/skills/{id}.md); None — файл не найден."""
@@ -121,7 +131,8 @@ def skill_meta(skill_id: str) -> dict:
 
 
 def suggest_skills(
-    text: str, exclude: list | None = None, limit: int = 3, is_admin: bool = False
+    text: str, exclude: list | None = None, limit: int = 3, is_admin: bool = False,
+    company_only: bool = False,
 ) -> list:
     """Навыки, чьи фразы-триггеры встречаются в тексте сообщения.
 
@@ -139,6 +150,8 @@ def suggest_skills(
         if skill.get("id") in excluded:
             continue
         if is_admin_only(skill) and not is_admin:
+            continue
+        if company_only and skill.get("category") != COMPANY_CATEGORY:
             continue
         meta = skill_meta(skill.get("id") or "")
         triggers = meta.get("triggers")

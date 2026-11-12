@@ -35,6 +35,10 @@
 
   function token() { var s = session(); return s ? s.token : null; }
 
+  /* компания-заказчик смотрит запросы, но не откликается и не пользуется
+     инструментами команды стартапа (генерация гипотез, «Мои отклики») */
+  function isCompany() { var s = session(); return !!(s && s.account_type === 'company'); }
+
   function short(text, n) {
     text = String(text || '');
     return text.length > n ? text.slice(0, n - 1).replace(/\s+\S*$/, '') + '…' : text;
@@ -70,7 +74,9 @@
     if (!b) return;
     if (s && s.account_type === 'company') {
       b.hidden = false;
-      b.innerHTML = 'Вы в режиме <b>компании-заказчика</b>. Свой запрос создаётся в <a href="company.html">Кабинете заказчика</a> — там же отклики команд.';
+      b.innerHTML = 'Вы вошли как <b>компания-заказчик</b>: здесь можно посмотреть, как выглядят опубликованные запросы. Свой запрос создаётся в <a href="company.html">Кабинете заказчика</a> — там же отклики команд.';
+      var mineTab = document.querySelector('.ch-tabs');
+      if (mineTab) mineTab.hidden = true;
     } else {
       b.hidden = false;
       b.innerHTML = 'Не нашли подходящего вызова? Запросы появляются, когда компании проходят процесс формулирования в <a href="company.html">Кабинете заказчика</a>. ' +
@@ -131,7 +137,8 @@
     var c = state.items.filter(function (x) { return x.id === id; })[0];
     if (!c) return;
     var dlg = el('chDialog');
-    var canRespond = !c.is_owner && (c.status === 'published' || c.status === 'in_pilot');
+    var company = isCompany();
+    var canRespond = !company && !c.is_owner && (c.status === 'published' || c.status === 'in_pilot');
     el('chDialogBody').innerHTML =
       '<button type="button" class="modal-close" data-close="1" aria-label="Закрыть">✕</button>' +
       '<div class="ch-card-top"><span class="pill pill--done">' + esc(c.format_title || '') + '</span>' + (c.demo ? '<span class="pill pill--warn">демо-запрос</span>' : '') + '</div>' +
@@ -152,8 +159,8 @@
         row('Решение о внедрении принимает', c.decision_maker) +
         row('Что будет при успехе', c.next_step) +
       '</div>' +
-      '<div class="ch-ai"><button type="button" class="btn-register" data-sprint="' + esc(c.id) + '">Сгенерировать гипотезы решения с ИИ-агентом</button>' +
-        '<span class="cell-sub">Агент «Генератор и быстрая проверка гипотез» предложит 5–10 подходов и быстрые проверки — до отклика.</span></div>' +
+      (company ? '' : '<div class="ch-ai"><button type="button" class="btn-register" data-sprint="' + esc(c.id) + '">Сгенерировать гипотезы решения с ИИ-агентом</button>' +
+        '<span class="cell-sub">Агент «Генератор и быстрая проверка гипотез» предложит 5–10 подходов и быстрые проверки — до отклика.</span></div>') +
       (canRespond ? (
         '<form class="ch-form" id="chForm">' +
           '<h3>Откликнуться</h3>' +
@@ -166,7 +173,8 @@
           '<p class="login-msg" id="chFormMsg" hidden></p>' +
           '<button type="submit" class="btn-primary">Отправить отклик</button>' +
         '</form>')
-        : (c.is_owner ? '<p class="cell-sub">Это ваш запрос — отклики разбираются в <a href="company.html">Кабинете заказчика</a>.</p>' : '<p class="cell-sub">Запрос сейчас не принимает отклики.</p>'));
+        : (c.is_owner ? '<p class="cell-sub">Это ваш запрос — отклики разбираются в <a href="company.html">Кабинете заказчика</a>.</p>'
+          : (company ? '<p class="cell-sub">На запросы откликаются команды стартапов.</p>' : '<p class="cell-sub">Запрос сейчас не принимает отклики.</p>')));
 
     var form = el('chForm');
     if (form) {

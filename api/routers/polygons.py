@@ -18,9 +18,10 @@ from ..runtime import polygons
 from ..runtime.llm_settings import effective_config_for
 from ..runtime.model_engine import author_name
 from ..runtime.polygons import PolygonError
-from .auth import get_current_user, get_optional_user
+from .auth import deny_company_account, get_current_user, get_optional_user
 
-router = APIRouter(prefix="/api")
+# Инструмент команды стартапа: аккаунту компании-заказчика — 403
+router = APIRouter(prefix="/api", dependencies=[Depends(deny_company_account)])
 
 PANEL_TIMEOUT = 90.0
 

@@ -69,6 +69,15 @@ class ToolRegistry:
         tool = self._tools.get(name)
         return bool(tool and tool.requires_approval)
 
+    def without(self, names) -> "ToolRegistry":
+        """Копия реестра без перечисленных инструментов (например, инструменты
+        команды стартапа недоступны аккаунту компании-заказчика)."""
+        copy = ToolRegistry()
+        for name, tool in self._tools.items():
+            if name not in names:
+                copy.register(tool)
+        return copy
+
     def specs(self) -> list:
         """Спецификации в формате OpenAI tool-calling."""
         return [

@@ -25,7 +25,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 
 from ..runtime import challenges
 from ..runtime.challenges import ChallengeError
-from ..runtime.users import ACCOUNT_COMPANY, ROLE_ADMIN, account_type
+from ..runtime.users import ACCOUNT_COMPANY, ROLE_ADMIN, account_type, is_company_account
 from .auth import get_current_user
 
 router = APIRouter(prefix="/api")
@@ -159,6 +159,8 @@ def respond(cid: str, body: dict = Body(default_factory=dict), user: dict = Depe
         raise HTTPException(status_code=400, detail="Запрос не принимает отклики")
     if card.get("owner_id") == user["id"]:
         raise HTTPException(status_code=400, detail="Нельзя откликнуться на свой запрос")
+    if is_company_account(user):
+        raise HTTPException(status_code=403, detail="Откликаются команды стартапов, а не компании-заказчики")
     try:
         return store.add_response(cid, user, body)
     except ChallengeError as exc:

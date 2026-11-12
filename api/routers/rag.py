@@ -55,9 +55,10 @@ from fastapi import APIRouter, BackgroundTasks, Body, Depends, File, HTTPExcepti
 from ..runtime import indexer, ontologies, projects, rag, team, text_search
 from ..runtime.rag import RagError
 from ..runtime.users import ROLE_ADMIN
-from .auth import get_current_user, require_admin
+from .auth import deny_company_account, get_current_user, require_admin
 
-router = APIRouter(prefix="/api")
+# Инструмент команды стартапа: аккаунту компании-заказчика — 403
+router = APIRouter(prefix="/api", dependencies=[Depends(deny_company_account)])
 
 DOC_ID_RE = re.compile(r"^doc-[a-f0-9]{8,12}$")
 ZIP_MAX_BYTES = 100 * 1024 * 1024   # сам архив

@@ -9,9 +9,12 @@
    Роль «Администратор» открывает пункт меню «Пилот: режим
    администратора» и ссылку «Админ-панель» в левом меню.
    Тип аккаунта (account_type): «команда стартапа» или «компания —
-   потенциальный заказчик». Выбирается при регистрации и
-   переключается в меню пользователя; компания после входа
-   попадает в «Кабинет заказчика» (company.html).
+   потенциальный заказчик». Выбирается при регистрации; сменить его
+   может администратор (себе — в меню пользователя, другим — в
+   админ-панели). Компания после входа попадает в «Кабинет
+   заказчика» (company.html) и видит только функционал заказчика:
+   класс aios-company на <html> прячет инструменты стартапа
+   (см. js/sidebar.js).
    ============================================================ */
 (function () {
   var btn = document.getElementById('btnLogin');
@@ -448,8 +451,11 @@
         var roleEl = userMenu.querySelector('.user-menu-role');
         if (nameEl) nameEl.textContent = displayName;
         if (roleEl) roleEl.textContent = session.role + (isCompany ? ' · компания-заказчик' : ' · команда стартапа');
-        ensureAccountToggle();
+        /* сменить свой режим может только администратор (показ платформы
+           глазами обеих сторон); остальным тип задаётся при регистрации */
+        if (isAdmin) ensureAccountToggle();
         if (accountToggle) {
+          accountToggle.hidden = !isAdmin;
           accountToggle.textContent = isCompany ? 'Перейти в режим команды стартапа' : 'Перейти в режим компании-заказчика';
         }
       }
@@ -459,6 +465,10 @@
       btn.removeAttribute('aria-label');
       closeUserMenu();
     }
+    /* режим компании-заказчика: в меню только функционал заказчика */
+    try {
+      document.documentElement.classList.toggle('aios-company', !!(session && session.account_type === 'company'));
+    } catch (e) {}
     /* админ-пункты меню видны только роли «Администратор» */
     if (menuAdmin) menuAdmin.hidden = !isAdmin;
     if (menuPilot) menuPilot.hidden = !isAdmin;
@@ -799,7 +809,8 @@
       if (s && s.account_type !== type) {
         s.account_type = type;
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (e) {}
-        renderAuthState();
+        /* перезагрузка: sidebar.js заново применит доступ для нового режима */
+        location.reload();
       }
     }).catch(function () {
       if (getSession()) {

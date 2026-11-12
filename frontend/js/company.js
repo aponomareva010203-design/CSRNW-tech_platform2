@@ -107,20 +107,30 @@
 
   /* ---------- баннер режима ---------- */
 
+  function isAdmin() { var s = session(); return !!(s && s.role === 'Администратор'); }
+
+  /* сменить режим может только администратор; компании регистрируются
+     сразу как «компания — потенциальный заказчик» */
+  function switchHtml() {
+    return isAdmin()
+      ? '<button type="button" class="btn-primary" data-switch="company">Перейти в режим компании</button>'
+      : 'Чтобы работать как заказчик, зарегистрируйте аккаунт компании (в форме регистрации — «Компания — потенциальный заказчик»).';
+  }
+
   function renderBanner() {
     var b = el('coBanner');
     var s = session();
     if (s && !isCompany()) {
       b.hidden = false;
       b.innerHTML = 'Вы вошли как <b>команда стартапа</b>. Кабинет — для компаний-заказчиков: процесс ниже полезно знать и командам (так вы поймёте, как говорить с индустриальным партнёром). ' +
-        '<button type="button" class="btn-primary" data-switch="company">Перейти в режим компании</button> <a class="btn-register" href="challenges.html">Смотреть запросы компаний</a>';
+        switchHtml() + ' <a class="btn-register" href="challenges.html">Смотреть запросы компаний</a>';
     } else {
       b.hidden = true;
     }
   }
 
   function lockedHtml() {
-    return '<p class="jr-muted">Инструмент доступен в режиме компании-заказчика. <button type="button" class="btn-primary" data-switch="company">Перейти в режим компании</button></p>';
+    return '<p class="jr-muted">Инструмент доступен аккаунту компании-заказчика. ' + switchHtml() + '</p>';
   }
 
   /* ---------- 1. Процесс заказчика ---------- */

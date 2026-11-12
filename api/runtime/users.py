@@ -232,6 +232,21 @@ class UserStore:
         return hmac.compare_digest(_hash_password(password or "", salt), expected)
 
 
+def is_company_account(user: dict | None) -> bool:
+    """Аккаунт компании-заказчика без роли администратора: ему доступен только
+    функционал заказчика («Кабинет заказчика», «Запросы компаний», агенты для
+    компаний, настройки), но не инструменты команды стартапа. Администратор
+    в режиме компании видит интерфейс компании, но доступ к API не теряет."""
+    return bool(user) and account_type(user) == ACCOUNT_COMPANY and user.get("role") != ROLE_ADMIN
+
+
+def is_company_user(user_id: str | None) -> bool:
+    """is_company_account по id пользователя (рантайм чата, где нет зависимостей FastAPI)."""
+    if not user_id:
+        return False
+    return is_company_account(UserStore(get_settings().runtime_dir / "users").get(user_id))
+
+
 def is_admin_user(user_id: str | None) -> bool:
     """True — пользователь с ролью «Администратор» (по id из сессии чата).
 
