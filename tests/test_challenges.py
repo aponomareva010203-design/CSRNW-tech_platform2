@@ -106,15 +106,66 @@ def test_account_type_on_register_and_switch():
     h2, user2 = _user(client, "team@example.com")
     assert user2["account_type"] == "startup"
 
-    resp = client.patch("/api/auth/account-type", json={"account_type": "company"}, headers=h2)
+    # сам сменить тип аккаунта нельзя: компания не откроет себе инструменты стартапа
+    assert client.patch("/api/auth/account-type", json={"account_type": "startup"}, headers=h).status_code == 403
+    assert client.patch("/api/auth/account-type", json={"account_type": "company"}, headers=h2).status_code == 403
+
+    # администратор переключает свой режим и меняет тип другим
+    ha, _ = _login(client, ADMIN_LOGIN, ADMIN_PASSWORD)
+    resp = client.patch("/api/auth/account-type", json={"account_type": "company"}, headers=ha)
+    assert resp.status_code == 200 and resp.json()["account_type"] == "company"
+    assert client.patch("/api/auth/account-type", json={"account_type": "investor"}, headers=ha).status_code == 422
+    resp = client.patch(f"/api/admin/users/{user2['id']}/account-type", json={"account_type": "company"}, headers=ha)
     assert resp.status_code == 200 and resp.json()["account_type"] == "company"
     assert client.get("/api/auth/me", headers=h2).json()["account_type"] == "company"
-    assert client.patch("/api/auth/account-type", json={"account_type": "investor"}, headers=h2).status_code == 422
+    assert client.patch(f"/api/admin/users/{user2['id']}/account-type", json={"account_type": "startup"},
+                        headers=h).status_code == 403
     # неизвестный тип при регистрации отклоняется
     bad = client.post("/api/auth/register", json={
         "login": "x@example.com", "password": "pass1234", "consent_pdn": True,
         "consent_policy": True, "account_type": "admin"})
     assert bad.status_code == 422
+
+
+def test_company_account_gets_only_customer_tools(monkeypatch):
+    """Компании-заказчику закрыты инструменты команды стартапа: проекты,
+    полигоны, RAG-базы и онтологии, агенты стартапа в чате, отклики на запросы.
+    Функционал заказчика (кабинет, запросы, агент для компаний) открыт."""
+    from api.routers import chat as chat_router
+
+    client = _client()
+    hc, _ = _user(client, "company@example.com", "company")
+    ht, _ = _user(client, "team@example.com")
+
+    for path in ("/api/projects", "/api/polygons", "/api/rag", "/api/ontologies"):
+        assert client.get(path, headers=hc).status_code == 403, path
+        assert client.get(path, headers=ht).status_code == 200, path
+    assert client.get("/api/reminders", headers=hc).json() == {"items": []}
+
+    # функционал заказчика доступен
+    assert client.get("/api/company", headers=hc).status_code == 200
+    assert client.get("/api/challenges", headers=hc).status_code == 200
+    assert client.post("/api/challenges", json={"title": "Запрос"}, headers=hc).status_code == 201
+    # откликаются только команды стартапов
+    resp = client.post("/api/challenges/ch-demo01/responses", json={
+        "team": "Отдел", "approach": "Попробуем решить своими силами и силами подрядчика"}, headers=hc)
+    assert resp.status_code == 403
+
+    # чат: агенты команды стартапа компании не запускаются
+    monkeypatch.setattr(chat_router, "get_provider", lambda *a, **k: object())
+    resp = client.post("/api/chat", json={"message": "привет", "skill_ids": ["hypothesis-tester"]}, headers=hc)
+    assert resp.status_code == 403
+
+    # подсказки агентов — только агенты для компаний
+    q = "помогите сформулировать запрос и проверить гипотезу"
+    company_ids = [s["id"] for s in client.get("/api/chat/skills-suggest", params={"q": q}, headers=hc).json()["items"]]
+    team_ids = [s["id"] for s in client.get("/api/chat/skills-suggest", params={"q": q}, headers=ht).json()["items"]]
+    assert company_ids == ["company-request-architect"]
+    assert "hypothesis-tester" in team_ids
+
+    # инструменты стартапа вырезаются из реестра чата компании
+    reg = chat_router.get_registry().without(chat_router.STARTUP_ONLY_TOOLS)
+    assert not reg.has("get_projects") and not reg.has("run_polygon") and reg.has("search_corpus")
 
 
 def test_challenge_lifecycle_and_responses():

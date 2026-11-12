@@ -635,7 +635,19 @@
     return note;
   }
 
+  /* Компания-заказчик: в меню только агенты для компаний (category
+     company) и база «Запросы индустрии»; агенты и базы команды стартапа
+     ей не предлагаются (сервер их для компании тоже не запускает). */
+  function isCompanyAccount() {
+    var s = getAuthSession();
+    return !!(s && s.account_type === 'company');
+  }
+
   function renderCtxMenu(agents, rags) {
+    if (isCompanyAccount()) {
+      agents = agents.filter(function (a) { return a.category === 'company'; });
+      rags = rags.filter(function (r) { return r.id === 'rag-1a0e5c0111'; });
+    }
     ctxMenu.innerHTML = '';
     /* --- Агенты --- */
     ctxMenu.appendChild(menuHead('Агенты'));
@@ -1131,7 +1143,32 @@
     var cards = document.createElement('div');
     cards.className = 'ws-fresh-cards';
     var SVG_OPEN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
-    [
+    /* Компания-заказчик: карточки только задач заказчика (боли, запрос,
+       отклики, пилот) — инструменты команды стартапа ей не показываются. */
+    var COMPANY_CARDS = [
+      [SVG_OPEN + '<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.3-4.3"/></svg>',
+        'Выявить боли', 'интервью с руководителем подразделения',
+        'Проведи со мной интервью руководителя подразделения, чтобы выявить 3–5 болей и их цену для компании. Подразделение: '],
+      [SVG_OPEN + '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></svg>',
+        'Сформулировать запрос', 'открытый вызов для студенческих стартапов',
+        'Помоги сформулировать открытый вызов для студенческих стартапов: боль, цена проблемы, измеримый результат, свобода решения. Боль: '],
+      [SVG_OPEN + '<path d="M5 12l4 4 10-10"/></svg>',
+        'Проверить запрос', 'чек-лист квалифицированного заказчика',
+        'Проверь наш запрос по чек-листу квалифицированного заказчика и предложи доработки: '],
+      [SVG_OPEN + '<path d="M4 6h16M4 12h16M4 18h10"/></svg>',
+        'Разобрать отклики', 'сравнить подходы команд',
+        'Помоги сравнить отклики команд на наш запрос и выбрать 2–3 для встречи. Отклики: '],
+      [SVG_OPEN + '<path d="M12 3l8 4v5c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg>',
+        'Условия пилота', 'критерии успеха, сроки, решение о закупке',
+        'Помоги составить условия пилота со студенческой командой: критерии успеха, сроки, что даёт компания, как принять решение о закупке. Запрос: '],
+      [SVG_OPEN + '<circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M3 20a5 5 0 0 1 10 0M11 20a5 5 0 0 1 10 0"/></svg>',
+        'Процесс в компании', 'роли и регламент работы со стартапами',
+        'Набросай регламент работы нашей компании со студенческими стартапами: роли, процесс сбора болей, сроки, ответственность. Компания: ']
+    ];
+    var authNow = null;
+    try { authNow = JSON.parse(localStorage.getItem(AUTH_KEY) || 'null'); } catch (e) { authNow = null; }
+    var isCompanyAcc = !!(authNow && authNow.account_type === 'company');
+    (isCompanyAcc ? COMPANY_CARDS : [
       [/* колба-эксперимент */
         SVG_OPEN + '<path d="M9 3h6"/><path d="M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-9V3"/><path d="M7.5 15h9"/></svg>',
         'Проверить гипотезу', 'формулировка, критерий успеха, эксперимент',
@@ -1168,7 +1205,7 @@
         SVG_OPEN + '<path d="M4 7.5A2.5 2.5 0 0 1 6.5 5h3l2 2.5h6A2.5 2.5 0 0 1 20 10v7a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17z"/><path d="M12 11v5M9.5 13.5h5"/></svg>',
         'Завести стартап', 'карточка стартапа или задачи — онбординг',
         'Помоги завести карточку нашего стартапа на платформе: ']
-    ].forEach(function (card) {
+    ]).forEach(function (card) {
       var el = document.createElement('button');
       el.type = 'button';
       el.className = 'ws-fresh-card';

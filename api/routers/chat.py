@@ -126,6 +126,14 @@ def get_registry():
     return build_default_registry(get_settings().tools_root)
 
 
+# Инструменты команды стартапа: в чате компании-заказчика их нет
+# (карточки проектов, полигоны, конструкторы онтологий, RAG и моделей команды).
+STARTUP_ONLY_TOOLS = frozenset({
+    "get_projects", "save_project_card", "attach_project_file", "run_polygon",
+    "save_ontology", "save_rag", "get_records", "save_record",
+})
+
+
 @lru_cache(maxsize=64)
 def get_provider(base_url: str = "", api_key: str = "", model: str = ""):
     """Провайдер LLM по тройке конфигурации (кэш по значениям).
@@ -241,7 +249,10 @@ def skills_suggest(
     exclude_ids = [x.strip() for x in exclude.split(",") if x.strip()]
     is_admin = bool(user) and user.get("role") == users.ROLE_ADMIN
     return {
-        "items": datarepo.suggest_skills(q, exclude=exclude_ids, is_admin=is_admin)
+        "items": datarepo.suggest_skills(
+            q, exclude=exclude_ids, is_admin=is_admin,
+            company_only=users.is_company_account(user),
+        )
     }
 
 
@@ -314,7 +325,14 @@ async def chat(req: ChatRequest, authorization: str | None = Header(default=None
     # продолжается как обычный чат
     req.agent_id = None
     is_admin = users.is_admin_user(user_id)
+    is_company = users.is_company_user(user_id)
     for skill_id in req.skill_ids:
+        # компании-заказчику — только агенты для компаний
+        if is_company and not datarepo.is_company_skill(skill_id):
+            raise HTTPException(
+                status_code=403,
+                detail="Агент команды стартапа недоступен аккаунту компании-заказчика",
+            )
         # навык каталога либо личный черновик владельца (draft:…, проверка из
         # кабинета); admin-only агенты каталога — только роли «Администратор»
         if not skill_drafts.skill_available(skill_id, user_id, is_admin=is_admin):
@@ -457,7 +475,7 @@ async def chat(req: ChatRequest, authorization: str | None = Header(default=None
                 async for event in run_agent_loop(
                     settings=get_settings(),
                     provider=provider,  # конфигурация владельца сессии (личная или общая)
-                    registry=get_registry(),
+                    registry=get_registry().without(STARTUP_ONLY_TOOLS) if is_company else get_registry(),
                     store=store,
                     session=session,
                     user_text=user_text,

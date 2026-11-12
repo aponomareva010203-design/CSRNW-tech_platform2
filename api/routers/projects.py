@@ -41,9 +41,10 @@ from fastapi.responses import FileResponse
 from ..runtime import cabinet, hypotheses, project_icons, projects, team
 from ..runtime.projects import ProjectError
 from ..runtime.users import ROLE_ADMIN
-from .auth import get_current_user, get_user_store, require_admin
+from .auth import deny_company_account, get_current_user, get_user_store, require_admin
 
-router = APIRouter(prefix="/api")
+# Инструмент команды стартапа: аккаунту компании-заказчика — 403
+router = APIRouter(prefix="/api", dependencies=[Depends(deny_company_account)])
 
 
 def _visible_card(store, project_id: str, user: dict) -> dict | None:

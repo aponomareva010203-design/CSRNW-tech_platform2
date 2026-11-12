@@ -229,12 +229,17 @@
       var rolePill = isAdmin
         ? '<span class="role-pill role-pill--admin">Администратор</span>'
         : '<span class="role-pill role-pill--user">Пользователь</span>';
+      /* тип аккаунта: команда стартапа или компания-заказчик */
+      var isCompanyAcc = u.account_type === 'company';
+      rolePill += '<div class="at-acct">' + (isCompanyAcc ? 'компания-заказчик' : 'команда стартапа') + '</div>';
       var toggleTitle = isAdmin ? 'Сделать пользователем' : 'Сделать админом';
       var nextRole = isAdmin ? 'Пользователь' : 'Администратор';
       var actions = self
         ? '<span class="at-self">это вы</span>'
         : '<button class="adm-btn" type="button" data-act="role" data-id="' + esc(u.id) +
             '" data-role="' + esc(nextRole) + '">' + esc(toggleTitle) + '</button>' +
+          '<button class="adm-btn" type="button" data-act="acct" data-id="' + esc(u.id) +
+            '" data-acct="' + (isCompanyAcc ? 'startup' : 'company') + '">' + (isCompanyAcc ? 'Сделать стартапом' : 'Сделать компанией') + '</button>' +
           '<button class="adm-btn adm-btn--danger" type="button" data-act="del" data-id="' + esc(u.id) +
             '" data-name="' + esc(u.name || u.login) + '">Удалить</button>';
       var prev = users[i - 1];
@@ -360,6 +365,11 @@
       API.adminUpdateUserRole(session.token, id, nextRole)
         .then(load)
         .catch(function (err) { showMsg(err && err.message ? err.message : 'Не удалось сменить роль'); });
+    } else if (act === 'acct') {
+      hideMsg();
+      API.adminSetAccountType(session.token, id, btnEl.getAttribute('data-acct'))
+        .then(load)
+        .catch(function (err) { showMsg(err && err.message ? err.message : 'Не удалось сменить тип аккаунта'); });
     } else if (act === 'del') {
       var name = btnEl.getAttribute('data-name');
       if (!window.confirm('Удалить пользователя «' + name + '»? Действие необратимо.')) return;

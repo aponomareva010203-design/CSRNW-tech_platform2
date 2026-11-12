@@ -52,6 +52,7 @@ from ..runtime.projects import (
 from ..runtime import reminders
 from ..runtime.users import (
     ACCOUNT_TYPES,
+    is_company_account,
     ROLES,
     ROLE_ADMIN,
     DuplicateLogin,
@@ -210,6 +211,18 @@ async def require_admin(user: dict = Depends(get_current_user)) -> dict:
     if user.get("role") != ROLE_ADMIN:
         raise HTTPException(status_code=403, detail="Доступ только для администраторов")
     return user
+
+
+async def deny_company_account(authorization: str | None = Header(default=None)) -> None:
+    """Зависимость FastAPI для инструментов команды стартапа (проекты, полигоны,
+    онтологии и RAG-базы): аккаунту компании-заказчика — 403. Гости и команды
+    стартапов проходят дальше, авторизацию эндпоинты проверяют сами."""
+    user = await get_optional_user(authorization)
+    if is_company_account(user):
+        raise HTTPException(
+            status_code=403,
+            detail="Инструмент команды стартапа недоступен аккаунту компании-заказчика",
+        )
 
 
 async def get_optional_user(authorization: str | None = Header(default=None)) -> dict | None:
@@ -403,11 +416,13 @@ def me(user: dict = Depends(get_current_user)):
 
 
 @router.patch("/auth/account-type")
-def set_account_type(req: AccountTypeUpdate, user: dict = Depends(get_current_user)):
-    """Переключить режим аккаунта: команда стартапа ⇄ компания-заказчик.
+def set_account_type(req: AccountTypeUpdate, user: dict = Depends(require_admin)):
+    """Переключить режим своего аккаунта: команда стартапа ⇄ компания-заказчик.
 
-    Роль доступа (администратор/пользователь) не меняется — это только
-    режим работы: компания видит «Кабинет заказчика» и публикует запросы.
+    Только администратору — чтобы показать платформу глазами обеих сторон.
+    У остальных тип аккаунта задаётся при регистрации и меняется
+    администратором (PATCH /api/admin/users/{id}/account-type): компания не
+    может сама открыть себе инструменты стартапа.
     """
     if req.account_type not in ACCOUNT_TYPES:
         raise HTTPException(status_code=422, detail="Неизвестный тип аккаунта")
@@ -673,6 +688,18 @@ def admin_set_role(user_id: str, req: RoleUpdate, _: dict = Depends(require_admi
     return store.public(target)
 
 
+@router.patch("/admin/users/{user_id}/account-type")
+def admin_set_account_type(user_id: str, req: AccountTypeUpdate, _: dict = Depends(require_admin)):
+    """Администратор меняет тип аккаунта пользователя (стартап / компания-заказчик)."""
+    store = get_user_store()
+    target = store.get(user_id)
+    if target is None:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    target["account_type"] = req.account_type
+    store.save(target)
+    return store.public(target)
+
+
 @router.delete("/admin/users/{user_id}")
 def admin_delete_user(user_id: str, admin: dict = Depends(require_admin)):
     if user_id == admin["id"]:
@@ -917,5 +944,7 @@ def admin_set_own_reminder_overrides(
 @router.get("/reminders")
 def list_reminders(user: dict = Depends(get_current_user)):
     """Активные напоминания текущего пользователя (список [{id, label}])."""
+    if is_company_account(user):
+        return {"items": []}  # шаги пайплайна стартапа компании не касаются
     project = reminders.latest_active_project(get_project_store(), user["id"])
     return {"items": reminders.compute_reminders(user, project)}

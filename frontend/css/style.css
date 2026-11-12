@@ -9109,3 +9109,19 @@ body:has(.ws-search-overlay:not([hidden])) [data-tooltip]::after { display: none
   .ch-row { grid-template-columns: 1fr; gap: 2px; }
   .ch-grid { grid-template-columns: 1fr; }
 }
+
+
+/* ============================================================
+   Режим компании-заказчика (класс aios-company на <html>, js/sidebar.js):
+   в меню — только функционал заказчика; инструменты команды стартапа
+   скрыты (сервер закрывает их для компании отдельно).
+   ============================================================ */
+html.aios-company .sidebar [data-side-group="dashboards"],
+html.aios-company .sidebar [data-side-group="catalogs"],
+html.aios-company .sidebar #menuCabinet,
+html.aios-company .sidebar #menuProjects,
+html.aios-company .sidebar #menuAutomations,
+html.aios-company #menuPilot,
+html.aios-company .ws-reminder-badge,
+html.aios-company [data-startup-only] { display: none !important; }
+.at-acct { margin-top: 3px; font-size: 11.5px; color: var(--ink-soft); white-space: nowrap; }

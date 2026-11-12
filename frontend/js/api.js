@@ -510,6 +510,11 @@
     return request('PATCH', '/admin/users/' + encodeURIComponent(id), { role: role }, token);
   }
 
+  /** Тип аккаунта пользователя: 'startup' — команда стартапа, 'company' — компания-заказчик. */
+  function adminSetAccountType(token, id, accountType) {
+    return request('PATCH', '/admin/users/' + encodeURIComponent(id) + '/account-type', { account_type: accountType }, token);
+  }
+
   /** [админ] Удаление пользователя. */
   function adminDeleteUser(token, id) {
     return request('DELETE', '/admin/users/' + encodeURIComponent(id), undefined, token);
@@ -1361,6 +1366,7 @@
     deleteSession: deleteSession,
     register: register,
     setAccountType: setAccountType,
+    adminSetAccountType: adminSetAccountType,
     challengesList: challengesList,
     challengeGet: challengeGet,
     challengeCreate: challengeCreate,
