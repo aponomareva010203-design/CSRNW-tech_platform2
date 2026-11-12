@@ -5,7 +5,8 @@
       "name_ru": "Онбординг стартапа",
       "order": 1,
       "skills": [
-        "project-onboarding"
+        "project-onboarding",
+        "startup-tracker"
       ],
       "next": "discovery"
     },
@@ -15,7 +16,8 @@
       "order": 2,
       "skills": [
         "hypothesis-tester",
-        "custdev-interviewer"
+        "custdev-interviewer",
+        "hypothesis-sprinter"
       ],
       "next": "market"
     },
@@ -33,7 +35,8 @@
       "name_ru": "Экономика продукта",
       "order": 4,
       "skills": [
-        "unit-economist"
+        "unit-economist",
+        "risk-manager"
       ],
       "next": "funding"
     },
@@ -43,7 +46,9 @@
       "order": 5,
       "skills": [
         "pitch-coach",
-        "support-navigator"
+        "support-navigator",
+        "funding-scout",
+        "valuation-advisor"
       ],
       "next": "agents"
     },

@@ -51,11 +51,22 @@ data/skills/*
 !data/skills/unit_economist.md
 !data/skills/pitch_coach.md
 !data/skills/support_navigator.md
+# Агенты пути стартапа: генерация и быстрая проверка гипотез, трекер-наставник,
+# фандрайзер, риск-менеджер, оценщик стоимости и агент для компаний-заказчиков
+!data/skills/hypothesis_sprinter.md
+!data/skills/startup_tracker.md
+!data/skills/funding_scout.md
+!data/skills/risk_manager.md
+!data/skills/valuation_advisor.md
+!data/skills/company_request_architect.md
 # Конструкторы онтологий и RAG раздела «Данные и знания» под тему платформы
 !data/skills/ontology-engineer.md
 !data/skills/rag-builder.md
 # Демо-данные «Рабочего стола стартапа» — команды правят их под свой стартап
 !data/dashboard.json
+# «Путь стартапа» (journey.html) и демо-запросы компаний (challenges.html)
+!data/startup-journey.json
+!data/challenges.json
 # Карта этапов конвейера навыков (бейдж этапа и «следующий шаг» в чате)
 !data/stage-map.json
 # Демо-профиль команды для раздела «Об организации»

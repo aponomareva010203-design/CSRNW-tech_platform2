@@ -8,6 +8,10 @@
    role}. Запросы идут через window.AIOS_API (/api/auth/*).
    Роль «Администратор» открывает пункт меню «Пилот: режим
    администратора» и ссылку «Админ-панель» в левом меню.
+   Тип аккаунта (account_type): «команда стартапа» или «компания —
+   потенциальный заказчик». Выбирается при регистрации и
+   переключается в меню пользователя; компания после входа
+   попадает в «Кабинет заказчика» (company.html).
    ============================================================ */
 (function () {
   var btn = document.getElementById('btnLogin');
@@ -39,6 +43,11 @@
     '        <span>Повторите пароль</span>',
     '        <input type="password" name="password2" autocomplete="new-password" minlength="4">',
     '      </label>',
+    '      <fieldset class="login-account" id="accountTypeField" hidden>',
+    '        <legend>Кто вы на платформе</legend>',
+    '        <label><input type="radio" name="account_type" value="startup" checked><span><b>Команда стартапа</b> — студенты, аспиранты, молодые учёные</span></label>',
+    '        <label><input type="radio" name="account_type" value="company"><span><b>Компания — потенциальный заказчик</b> — формулирую запросы и задачи для стартапов</span></label>',
+    '      </fieldset>',
     '      <div id="consentFields" hidden>',
     '        <label class="login-consent">',
     '          <input type="checkbox" name="consent_pdn">',
@@ -119,8 +128,9 @@
   var title = document.getElementById('loginTitle');
   var password2Field = document.getElementById('password2Field');
   var submitBtn = document.getElementById('loginSubmit');
-  var registerLink = document.querySelector('.btn-register');
-  var loginLink = document.querySelector('.btn-login-alt');
+  /* ищем внутри модалки: на страницах бывают свои кнопки .btn-register */
+  var registerLink = modal.querySelector('.btn-register:not(.btn-login-alt)');
+  var loginLink = modal.querySelector('.btn-login-alt');
   var altQuestion = document.getElementById('altQuestion');
   var resendLink = document.getElementById('resendLink');
   var btnSettings = document.getElementById('btnSettings');
@@ -283,6 +293,7 @@
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({
         token: token, login: user.login, name: user.name, role: user.role,
+        account_type: user.account_type === 'company' ? 'company' : 'startup',
         profile_filled: !!profileFilled
       }));
     } catch (e) { /* приватный режим — живём без сохранения */ }
@@ -341,6 +352,8 @@
        обязательность проверяю сам в submit, как и у password2 */
     var consentFields = document.getElementById('consentFields');
     if (consentFields) consentFields.hidden = !isReg;
+    var accountField = document.getElementById('accountTypeField');
+    if (accountField) accountField.hidden = !isReg;
     ['consent_pdn', 'consent_policy'].forEach(function (n) {
       var cb = form && form.elements[n];
       if (cb) cb.required = isReg;
@@ -429,11 +442,16 @@
       btn.textContent = displayName;
       btn.classList.add('btn-login--user');
       btn.setAttribute('aria-label', displayName + ' — ' + session.role);
+      var isCompany = session.account_type === 'company';
       if (userMenu) {
         var nameEl = userMenu.querySelector('.user-menu-name');
         var roleEl = userMenu.querySelector('.user-menu-role');
         if (nameEl) nameEl.textContent = displayName;
-        if (roleEl) roleEl.textContent = session.role;
+        if (roleEl) roleEl.textContent = session.role + (isCompany ? ' · компания-заказчик' : ' · команда стартапа');
+        ensureAccountToggle();
+        if (accountToggle) {
+          accountToggle.textContent = isCompany ? 'Перейти в режим команды стартапа' : 'Перейти в режим компании-заказчика';
+        }
       }
     } else {
       btn.textContent = 'Войти';
@@ -459,6 +477,50 @@
       window.dispatchEvent(new CustomEvent('aios-auth-change'));
     } catch (e) {}
   }
+
+  /* ---------- режим аккаунта: команда стартапа ⇄ компания-заказчик ---------- */
+
+  var accountToggle = null;
+
+  function ensureAccountToggle() {
+    if (accountToggle || !userMenu) return;
+    accountToggle = document.createElement('button');
+    accountToggle.type = 'button';
+    accountToggle.className = 'user-menu-item';
+    accountToggle.id = 'btnAccountType';
+    var logout = userMenu.querySelector('.user-menu-logout');
+    userMenu.insertBefore(accountToggle, logout || null);
+    accountToggle.addEventListener('click', function () {
+      var session = getSession();
+      if (!session) return;
+      var next = session.account_type === 'company' ? 'startup' : 'company';
+      closeUserMenu();
+      setAccountType(next).then(function () {
+        location.href = next === 'company' ? 'company.html' : 'journey.html';
+      }).catch(function (err) {
+        alert(err && err.message ? err.message : 'Не удалось сменить режим');
+      });
+    });
+  }
+
+  /* Сменить режим аккаунта на сервере и в сессии браузера; возвращает Promise.
+     Доступно другим скриптам страницы (company.js, challenges.js). */
+  function setAccountType(next) {
+    var session = getSession();
+    if (!session || !window.AIOS_API || !window.AIOS_API.setAccountType) {
+      return Promise.reject(new Error('Войдите, чтобы сменить режим'));
+    }
+    return window.AIOS_API.setAccountType(session.token, next).then(function (user) {
+      var s = getSession();
+      if (s) {
+        s.account_type = user.account_type;
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (e) {}
+      }
+      renderAuthState();
+      return user;
+    });
+  }
+  window.AIOS_SET_ACCOUNT_TYPE = setAccountType;
 
   /* ---------- счётчик суточных токенов под именем в левом меню ----------
 
@@ -599,7 +661,9 @@
           return;
         }
         submitBtn.disabled = true;
-        API.register(login, password, form.elements.website ? form.elements.website.value : '', consentPdn, consentPolicy)
+        var accountInput = form.querySelector('input[name="account_type"]:checked');
+        var accountType = accountInput ? accountInput.value : 'startup';
+        API.register(login, password, form.elements.website ? form.elements.website.value : '', consentPdn, consentPolicy, accountType)
           .then(function () {
             /* автовхода нет: сначала подтверждение e-mail по ссылке из письма */
             setMode('login');
@@ -621,6 +685,11 @@
             saveSession(res.token, res.user, res.profile_filled);
             renderAuthState();
             closeModal();
+            /* компания-заказчик — сразу в «Кабинет заказчика» */
+            if (res.user && res.user.account_type === 'company') {
+              if (!/company\.html$/.test(location.pathname)) location.href = 'company.html';
+              return;
+            }
             /* незаполненный профиль — сначала «Настройки» (онбординг):
                заполнить «Данные пользователя» */
             if (needsOnboarding()) {
@@ -723,7 +792,16 @@
   (function verifySession() {
     var session = getSession();
     if (!session || !window.AIOS_API || !window.AIOS_API.me) return;
-    window.AIOS_API.me(session.token).catch(function () {
+    window.AIOS_API.me(session.token).then(function (user) {
+      /* режим аккаунта мог смениться на другом устройстве */
+      var s = getSession();
+      var type = user && user.account_type === 'company' ? 'company' : 'startup';
+      if (s && s.account_type !== type) {
+        s.account_type = type;
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (e) {}
+        renderAuthState();
+      }
+    }).catch(function () {
       if (getSession()) {
         clearSession();
         renderAuthState();

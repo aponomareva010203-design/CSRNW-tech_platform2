@@ -6,6 +6,11 @@
       "description_ru": "Готовые агенты-шаблоны: проверка гипотез, CustDev-интервью, анализ рынка, юнит-экономика, питч и меры поддержки. Скачайте .md и доработайте под свой стартап"
     },
     {
+      "key": "company",
+      "title_ru": "Агенты для компаний-заказчиков",
+      "description_ru": "Агенты, которые помогают компании стать квалифицированным заказчиком: выявить боли подразделений и сформулировать запрос для студенческих стартапов"
+    },
+    {
       "key": "special",
       "title_ru": "Агенты вашей команды",
       "description_ru": "Агенты, которые соберёт команда на сессии: из шаблона в конструкторе или в диалоге с «Конструктором агентов»"
@@ -87,6 +92,78 @@
       "recommended_model": "—",
       "file_url": "/data/skills/support_navigator.md",
       "image_url": "/data/icons/support-navigator.svg",
+      "source": "template"
+    },
+    {
+      "id": "hypothesis-sprinter",
+      "category": "general",
+      "name": "Генератор и быстрая проверка гипотез",
+      "domain": "Генерация и быстрая проверка гипотез",
+      "description_ru": "Из идеи, технологии или запроса компании генерирует 15–30 гипотез, отбирает самые рискованные и за 1–3 дня проверяет их дёшево: симуляцией на полигоне, ИИ-фокус-группой, письмами и звонками, лендингом.",
+      "author": "Команда AIOS",
+      "recommended_model": "—",
+      "file_url": "/data/skills/hypothesis_sprinter.md",
+      "image_url": "/data/icons/hypothesis-sprinter.svg",
+      "source": "template"
+    },
+    {
+      "id": "startup-tracker",
+      "category": "general",
+      "name": "Трекер-наставник",
+      "domain": "Виртуальный помощник и трекер",
+      "description_ru": "Ведёт команду по «Пути стартапа»: определяет уровень по фактам, раз в неделю помогает выбрать 1–3 цели, разбирает, что мешает перейти на следующий уровень, и подключает нужных агентов.",
+      "author": "Команда AIOS",
+      "recommended_model": "—",
+      "file_url": "/data/skills/startup_tracker.md",
+      "image_url": "/data/icons/startup-tracker.svg",
+      "source": "template"
+    },
+    {
+      "id": "funding-scout",
+      "category": "general",
+      "name": "Фандрайзер: поиск финансирования и сборка заявки",
+      "domain": "Финансирование и заявки",
+      "description_ru": "Строит воронку финансирования под уровень стартапа — гранты, конкурсы, акселераторы, компании-заказчики, ангелы и фонды — и собирает документ: заявку на грант, письмо инвестору, коммерческое предложение или отклик на запрос компании.",
+      "author": "Команда AIOS",
+      "recommended_model": "—",
+      "file_url": "/data/skills/funding_scout.md",
+      "image_url": "/data/icons/funding-scout.svg",
+      "source": "template"
+    },
+    {
+      "id": "risk-manager",
+      "category": "general",
+      "name": "Риск-менеджер",
+      "domain": "Управление рисками",
+      "description_ru": "Ведёт реестр рисков стартапа (технология, рынок, финансы, права на РИД, команда, регуляторика): вероятность × влияние, тепловая карта, меры и владельцы, стресс-тест финансов на полигоне.",
+      "author": "Команда AIOS",
+      "recommended_model": "—",
+      "file_url": "/data/skills/risk_manager.md",
+      "image_url": "/data/icons/risk-manager.svg",
+      "source": "template"
+    },
+    {
+      "id": "valuation-advisor",
+      "category": "general",
+      "name": "Оценщик стоимости стартапа",
+      "domain": "Стоимость стартапа",
+      "description_ru": "Объясняет, когда стартапу нужна оценка стоимости, и считает ориентир pre-money методами ранних стадий (Беркус, скоринговый, факторы риска, венчурный метод) с допущениями — для раунда, доли вуза и опционов.",
+      "author": "Команда AIOS",
+      "recommended_model": "—",
+      "file_url": "/data/skills/valuation_advisor.md",
+      "image_url": "/data/icons/valuation-advisor.svg",
+      "source": "template"
+    },
+    {
+      "id": "company-request-architect",
+      "category": "company",
+      "name": "Архитектор запроса компании",
+      "domain": "Запросы индустрии для стартапов",
+      "description_ru": "Помогает компании стать квалифицированным заказчиком: интервью с подразделениями, карта болей, формулировка открытого вызова (проблема, цена, измеримый результат, свобода решения, ресурсы, владелец) и проверка перед публикацией.",
+      "author": "Команда AIOS",
+      "recommended_model": "—",
+      "file_url": "/data/skills/company_request_architect.md",
+      "image_url": "/data/icons/company-request-architect.svg",
       "source": "template"
     },
     {

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Запросы компаний — AIOS · Техностартап</title>
+<link rel="stylesheet" href="css/style.css?v=20261112a">
+</head>
+<body>
+<div class="layout">
+
+  <aside class="sidebar">
+    <a class="wordmark" href="index.html">
+      <span class="sigil"></span>
+      <span>AIOS</span>
+    </a>
+    <nav class="side-nav" aria-label="Разделы AIOS">
+      <div class="side-group side-group--collapsible" data-side-group="dashboards">
+        <button class="side-group-title side-group-toggle" type="button" aria-expanded="true" aria-controls="sideGroupDashboards">Дашборды</button>
+        <div class="side-group-items" id="sideGroupDashboards">
+        <a class="side-link" href="index.html">Рабочий стол стартапа</a>
+        <a class="side-link" href="journey.html">Путь стартапа</a>
+        <a class="side-link" href="pilot.html">Статус внедрения AIOS</a>
+        <a class="side-link" href="showcase.html">Витрина механизмов поддержки</a>
+        </div>
+      </div>
+
+      <div class="side-group side-group--collapsible" data-side-group="industry">
+        <button class="side-group-title side-group-toggle" type="button" aria-expanded="true" aria-controls="sideGroupIndustry">Стартапы и компании</button>
+        <div class="side-group-items" id="sideGroupIndustry">
+        <a class="side-link active" href="challenges.html">Запросы компаний</a>
+        <a class="side-link" href="company.html">Кабинет заказчика</a>
+        </div>
+      </div>
+
+      <div class="side-group side-group--collapsible" data-side-group="catalogs">
+        <button class="side-group-title side-group-toggle" type="button" aria-expanded="true" aria-controls="sideGroupCatalogs">Каталоги</button>
+        <div class="side-group-items" id="sideGroupCatalogs">
+        <a class="side-link side-link--ico" href="knowledge.html"><svg class="side-ico" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="5.5" rx="7" ry="2.8"/><path d="M5 5.5v13c0 1.6 3.1 2.9 7 2.9s7-1.3 7-2.9v-13"/><path d="M5 12c0 1.6 3.1 2.9 7 2.9s7-1.3 7-2.9"/></svg><span class="side-ico-main">Данные и знания</span></a>
+        <a class="side-link side-link--ico" href="agents.html"><svg class="side-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="5.5" y="8" width="13" height="10" rx="3"/><path d="M12 8V5.2"/><circle cx="12" cy="4" r="1.2"/><path d="M9.5 12.3h.01M14.5 12.3h.01"/><path d="M9.5 15.5h5"/></svg><span class="side-ico-main">Агенты</span></a>
+        <a class="side-link side-link--ico" id="menuModels" href="models.html"><svg class="side-ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="7" width="10" height="10" rx="2"/><rect x="10.2" y="10.2" width="3.6" height="3.6" rx="1"/><path d="M9.5 7V4.5M14.5 7V4.5M9.5 19.5V17M14.5 19.5V17M7 9.5H4.5M7 14.5H4.5M19.5 9.5H17M19.5 14.5H17"/></svg><span class="side-ico-main">Модели</span></a>
+        <a class="side-link side-link--ico" id="menuPolygons" href="polygons.html"><svg class="side-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5l7.4 4.3v8.4L12 20.5l-7.4-4.3V7.8z"/></svg><span class="side-ico-main">Полигоны</span></a>
+        </div>
+      </div>
+
+      <div class="side-group side-group--collapsible" id="wsGroup" data-side-group="workspace" hidden>
+        <button class="side-group-title side-group-toggle" type="button" aria-expanded="true" aria-controls="sideGroupWorkspace">Рабочее пространство</button>
+        <div class="side-group-items" id="sideGroupWorkspace">
+        <button class="side-link side-link--ico side-link--chat" id="btnNavWorkspace" type="button" hidden><svg class="side-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a8.4 8.4 0 0 1-8.5 8.4 8.9 8.9 0 0 1-3.4-.7L4 20l1.4-4.4A8.4 8.4 0 1 1 20 11.5z"/><path d="M12 8.5v6M9 11.5h6"/></svg><span class="side-ico-main">Новый чат</span></button>
+        <a class="side-link side-link--ico" id="menuCabinet" href="cabinet.html"><svg class="side-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg><span class="side-ico-main">Кабинет</span></a>
+        <a class="side-link side-link--ico" id="menuProjects" href="projects.html"><svg class="side-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5h3l2 2.5h6A2.5 2.5 0 0 1 20 10v7a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 17z"/></svg><span class="side-ico-main">Проекты</span></a>
+        <a class="side-link side-link--ico" id="menuAutomations" href="automations.html"><svg class="side-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3 5.5 13.5H11L10 21l7.5-10.5H12z"/></svg><span class="side-ico-main">Автоматизации</span></a>
+        </div>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <a class="side-link" id="btnSettings" href="settings.html" hidden>Настройки</a>
+      <button class="side-link" id="btnSuggest" type="button">Предложить изменения</button>
+      <a class="side-link" id="menuAdmin" href="admin.html" hidden>Админ-панель</a>
+      <div class="sidebar-user">
+        <button class="btn-login" id="btnLogin" type="button" aria-haspopup="dialog" aria-controls="loginModal">Войти</button>
+        <div class="user-menu" id="userMenu" hidden>
+          <div class="user-menu-head">
+            <span class="user-menu-name"></span>
+            <span class="user-menu-role"></span>
+          </div>
+          <a class="user-menu-item" id="menuPilot" href="pilot.html" hidden>Пилот: режим администратора</a>
+          <button class="user-menu-item" id="btnChangePass" type="button" hidden>Сменить пароль</button>
+          <button class="user-menu-item user-menu-logout" id="btnLogout" type="button">Выйти</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <script src="js/sidebar.js?v=20260925zq"></script>
+
+  <div class="page">
+
+  <section class="section-head">
+    <a class="backlink" href="index.html">← AIOS · Техностартап</a>
+    <h1>Запросы компаний</h1>
+    <div class="rule"></div>
+  </section>
+
+  <section class="page-section">
+    <p class="section-lead">Реальные боли компаний, сформулированные как <b>открытые вызовы</b>: компания фиксирует проблему, её цену и измеримый результат, а <b>способ решения оставляет команде</b>. Это не заказная НИОКР — это шанс применить свою технологию к задаче, за решение которой уже готовы платить, и получить площадку для пилота, данные и наставника.</p>
+    <div class="ch-banner" id="chBanner" hidden></div>
+  </section>
+
+  <section class="page-section ch-toolbar">
+    <div class="ch-tabs" role="tablist">
+      <button type="button" class="chip is-on" data-tab="all" role="tab">Все запросы</button>
+      <button type="button" class="chip" data-tab="mine" role="tab">Мои отклики</button>
+    </div>
+    <input type="search" id="chSearch" class="sc-search" placeholder="Поиск: отрасль, боль, технология…" aria-label="Поиск по запросам">
+    <div class="chips" id="chFormats" aria-label="Формат сотрудничества"></div>
+  </section>
+
+  <section class="page-section">
+    <div class="ch-grid" id="chGrid">Загрузка запросов…</div>
+    <div id="chMine" hidden></div>
+  </section>
+
+  <dialog class="jr-dialog ch-dialog" id="chDialog">
+    <div class="jr-dialog-body" id="chDialogBody"></div>
+  </dialog>
+
+</div>
+</div>
+<script src="js/cookie-consent.js?v=20261001b"></script>
+<script src="js/api.js?v=20261112a"></script>
+<script src="js/auth.js?v=20261112a"></script>
+<script src="js/agent_views.js?v=20260929m"></script>
+<script src="js/thinking.js?v=20260925zq"></script>
+<script src="js/challenges.js?v=20261112a"></script>
+<script src="js/workspace.js?v=20261110a"></script>
+</body>
+</html>

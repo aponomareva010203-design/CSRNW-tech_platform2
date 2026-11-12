@@ -51,6 +51,7 @@ from ..runtime.projects import (
 )
 from ..runtime import reminders
 from ..runtime.users import (
+    ACCOUNT_TYPES,
     ROLES,
     ROLE_ADMIN,
     DuplicateLogin,
@@ -99,6 +100,15 @@ class RegisterRequest(BaseModel):
     # Факт и дата согласий сохраняются в учётной записи (см. UserStore.create).
     consent_pdn: bool = Field(default=False)
     consent_policy: bool = Field(default=False)
+    # Кто регистрируется: команда стартапа (startup) или компания —
+    # потенциальный заказчик (company). Старые клиенты поле не шлют.
+    account_type: str = Field(default="startup", pattern="^(startup|company)$")
+
+
+class AccountTypeUpdate(BaseModel):
+    """Тело PATCH /api/auth/account-type: режим работы на платформе."""
+
+    account_type: str = Field(pattern="^(startup|company)$")
 
 
 class LoginRequest(BaseModel):
@@ -275,6 +285,7 @@ def register(req: RegisterRequest, request: Request):
             confirmed=False,
             consent_pdn=req.consent_pdn,
             consent_policy=req.consent_policy,
+            account_type=req.account_type,
         )
     except DuplicateLogin:
         raise HTTPException(status_code=409, detail="Этот логин уже занят")
@@ -389,6 +400,21 @@ def logout(
 @router.get("/auth/me")
 def me(user: dict = Depends(get_current_user)):
     return get_user_store().public(user)
+
+
+@router.patch("/auth/account-type")
+def set_account_type(req: AccountTypeUpdate, user: dict = Depends(get_current_user)):
+    """Переключить режим аккаунта: команда стартапа ⇄ компания-заказчик.
+
+    Роль доступа (администратор/пользователь) не меняется — это только
+    режим работы: компания видит «Кабинет заказчика» и публикует запросы.
+    """
+    if req.account_type not in ACCOUNT_TYPES:
+        raise HTTPException(status_code=422, detail="Неизвестный тип аккаунта")
+    user["account_type"] = req.account_type
+    store = get_user_store()
+    store.save(user)
+    return store.public(user)
 
 
 @router.get("/usage/me")

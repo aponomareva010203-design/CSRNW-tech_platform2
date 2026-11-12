@@ -29,6 +29,19 @@ ROLE_ADMIN = "Администратор"
 ROLE_USER = "Пользователь"
 ROLES = (ROLE_ADMIN, ROLE_USER)
 
+# Тип аккаунта (не путать с ролью доступа): команда стартапа или компания —
+# потенциальный заказчик. Компания видит «Кабинет заказчика» (карта болей,
+# конструктор запроса, отклики команд); старые записи без поля — стартап.
+ACCOUNT_STARTUP = "startup"
+ACCOUNT_COMPANY = "company"
+ACCOUNT_TYPES = (ACCOUNT_STARTUP, ACCOUNT_COMPANY)
+
+
+def account_type(user: dict | None) -> str:
+    """Тип аккаунта пользователя; неизвестное или пустое значение — стартап."""
+    value = (user or {}).get("account_type")
+    return value if value in ACCOUNT_TYPES else ACCOUNT_STARTUP
+
 PBKDF2_ITERATIONS = 120_000
 USER_ID_RE = re.compile(r"^[a-f0-9]{12}$")
 LOGIN_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")  # упрощённая проверка e-mail
@@ -90,6 +103,7 @@ class UserStore:
         confirmed: bool = False,
         consent_pdn: bool = False,
         consent_policy: bool = False,
+        account_type: str = ACCOUNT_STARTUP,
     ) -> dict:
         login = (login or "").strip().lower()
         name = (name or "").strip()
@@ -101,6 +115,8 @@ class UserStore:
             raise UserError("Имя должно быть от 2 до 80 символов")
         if role not in ROLES:
             raise UserError(f"Роль должна быть одной из: {', '.join(ROLES)}")
+        if account_type not in ACCOUNT_TYPES:
+            raise UserError(f"Тип аккаунта должен быть одним из: {', '.join(ACCOUNT_TYPES)}")
         if self.get_by_login(login) is not None:
             raise DuplicateLogin("Этот логин уже занят")
 
@@ -110,6 +126,7 @@ class UserStore:
             "login": login,
             "name": name,
             "role": role,
+            "account_type": account_type,
             "salt": salt,
             "password_hash": _hash_password(password, salt),
             "created_at": time.time(),
@@ -141,6 +158,7 @@ class UserStore:
             "login": user.get("login"),
             "name": user.get("name"),
             "role": user.get("role"),
+            "account_type": account_type(user),
             "created_at": user.get("created_at"),
             "last_login": user.get("last_login"),
             "confirmed": bool(user.get("confirmed", True)),

@@ -59,8 +59,10 @@
 | Что | Где |
 |---|---|
 | Рабочий стол стартапа (дашборд) | вёрстка `frontend/index.html`, логика `frontend/js/dashboard.js`, данные `data/dashboard.json` |
+| Путь стартапа (уровни, квесты, ворота) | `frontend/journey.html`, `js/journey.js`, карта `data/startup-journey.json` |
+| Запросы компаний и Кабинет заказчика | `frontend/challenges.html`, `js/challenges.js`, `frontend/company.html`, `js/company.js`; API `api/routers/challenges.py`, логика и чек-лист готовности запроса `api/runtime/challenges.py`; демо-запросы `data/challenges.json`; тип аккаунта (стартап / компания) — `account_type` в `api/runtime/users.py` |
 | Стили и цвета | `frontend/css/style.css`. Цвета — токены в начале файла: `--green` (основной синий), `--gold` (зелёный акцент), `--red`, `--amber`, `--ink`, `--ink-soft`, `--line`, `--card`, `--paper` |
-| Левое меню | копия блока `<aside class="sidebar">` есть в КАЖДОЙ странице `frontend/*.html` (кроме `privacy-policy.html`) |
+| Левое меню | копия блока `<aside class="sidebar">` есть в КАЖДОЙ странице `frontend/*.html` (кроме `privacy-policy.html`); группы: «Дашборды», «Стартапы и компании», «Каталоги», «Рабочее пространство» |
 | Данные и знания | `frontend/knowledge.html`, `js/knowledge.js`; онтологии `data/ontologies.json` + графы `data/ontologies/objects/`; RAG-базы `data/rag_bases.json` + документы `data/rag/corpus/{id}/*.md`. Демо-каталог собирается скриптом `scripts/seed_innovation_knowledge.py` (онтологии — `scripts/seed_knowledge/ontologies.py`): правь там и перезапусти скрипт |
 | Витрина механизмов поддержки | `frontend/showcase.html`, `js/showcase.js`; справочник мер (этапы, типы, меры) — `frontend/js/support_ecosystem_data.js` (НЕ в `data/`: папка `data/` в `.gitignore`, новые файлы там не попадают в репозиторий без исключения) |
 | Агенты | каталог `data/skills.json`, тексты агентов `data/skills/*.md`; страница `frontend/agents.html`, `js/agents.js`, шаблоны конструктора `js/agent_templates.js` |
@@ -135,8 +137,8 @@ JSON не видны. Скажи нажать «Вернуть демо-данн
    Подключи скрипт в конце страницы ПЕРЕД `js/workspace.js`.
 4. Данные раздела — новый файл `data/имя.json`.
 5. Добавь пункт меню в `<aside class="sidebar">` во ВСЕХ страницах
-   `frontend/*.html` (их 16, `privacy-policy.html` не трогай) — в нужную
-   группу: «Дашборды», «Каталоги» или «Рабочее пространство». Образец:
+   `frontend/*.html` (их 19, `privacy-policy.html` не трогай) — в нужную
+   группу: «Дашборды», «Стартапы и компании», «Каталоги» или «Рабочее пространство». Образец:
    `<a class="side-link side-link--ico" href="partners.html"><svg class="side-ico" viewBox="0 0 24 24" aria-hidden="true">…</svg><span class="side-ico-main">Партнёры</span></a>`.
    На самой новой странице добавь пункту класс `active`.
 6. Карточки — классы `mdl-grid` + `mdl-card`. Таблицы — `dtable`.

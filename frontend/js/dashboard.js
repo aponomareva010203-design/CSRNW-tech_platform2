@@ -1,7 +1,8 @@
 /* ============================================================
    «Рабочий стол стартапа» (index.html).
 
-   Данные — data/dashboard.json (демо-данные стартапа «ВиброСенс»).
+   Данные — data/dashboard.json (демо-данные стартапа «ЛузгаСорб» —
+   сорбент из лузги подсолнечника для очистки ливневых стоков).
    Команда меняет их под свой стартап двумя способами:
      1) правит data/dashboard.json в репозитории (видят все);
      2) кнопкой «Загрузить свои данные» подставляет свой JSON той же
@@ -17,7 +18,10 @@
      - Деньги и runway: выручка и расходы по месяцам (факт / план),
        остаток денег и месяц, когда они закончатся;
      - Конкуренты и альтернативы; команда и доли;
-     - Вехи (контрольные точки) со статусами.
+     - Вехи (контрольные точки) со статусами;
+     - Путь стартапа: уровень команды на игровом поле (journey.html,
+       прогресс — localStorage aios-journey-v1:<логин>) и ближайшие квесты;
+     - Риски: тепловая карта «вероятность × влияние» и реестр рисков.
    ============================================================ */
 
 (function () {
@@ -348,7 +352,7 @@
     var verdict;
     if (!u.cac || !u.arpa) verdict = 'Заполните unit_economics в data/dashboard.json, чтобы увидеть расчёт.';
     else if (u.ratio >= 3 && u.payback <= 12) verdict = 'Экономика сходится: можно вкладываться в каналы привлечения. Проверьте, что маржа и срок жизни подтверждены фактом, а не гипотезой.';
-    else if (u.ratio >= 1) verdict = 'Клиент окупается, но медленно. Рычаги: цена (гипотеза H-04), рост числа агрегатов на клиента, дешёвый канал (H-05).';
+    else if (u.ratio >= 1) verdict = 'Клиент окупается, но медленно. Рычаги: цена, рост числа единиц на клиента, более дешёвый канал привлечения — проверьте их как гипотезы.';
     else verdict = 'Каждый новый клиент приносит убыток: пересмотрите цену, себестоимость или канал до масштабирования.';
     el('ueVerdict').innerHTML = '<p class="widget-sub"><b>' + esc(u.model) + '.</b> ' + esc(verdict) + (u.note ? ' <i>' + esc(u.note) + '</i>' : '') + '</p>';
   }
@@ -447,6 +451,110 @@
       '</tbody>';
   }
 
+  /* ---------- Путь стартапа (мини-поле) ---------- */
+
+  var journey = null; /* data/startup-journey.json */
+
+  function journeyLevel() {
+    var login = 'guest';
+    try {
+      var s = JSON.parse(localStorage.getItem('aios-auth-v1') || 'null');
+      if (s && s.login) login = s.login;
+    } catch (e) {}
+    try {
+      var p = JSON.parse(localStorage.getItem('aios-journey-v1:' + login) || 'null');
+      return p && p.level ? p : null;
+    } catch (e) { return null; }
+  }
+
+  function renderJourney() {
+    var box = el('journeyMini');
+    if (!box) return;
+    if (!journey) {
+      fetch('/data/startup-journey.json').then(function (r) { return r.json(); })
+        .then(function (j) { journey = j; renderJourney(); })
+        .catch(function () { box.innerHTML = '<p class="widget-sub">Карта пути не загрузилась.</p>'; });
+      return;
+    }
+    var prog = journeyLevel();
+    var n = prog ? prog.level : 1;
+    var lv = journey.levels.filter(function (l) { return l.n === n; })[0] || journey.levels[0];
+    var done = prog ? prog.quests || {} : {};
+    var next = lv.quests.filter(function (q) { return !done[q.id]; }).slice(0, 3);
+    box.innerHTML =
+      '<ol class="jm-track">' + journey.levels.map(function (l) {
+        var st = l.n < n ? 'done' : (l.n === n ? 'current' : 'future');
+        return '<li class="jm-step jm-step--' + st + '" title="Уровень ' + l.n + ': ' + esc(l.title) + '"><span>' + (st === 'done' ? '✓' : l.n) + '</span><em>' + esc(l.short || l.title) + '</em></li>';
+      }).join('') + '</ol>' +
+      '<div class="jm-body"><div><b>Уровень ' + lv.n + ' из ' + journey.levels.length + ': ' + esc(lv.title) + '.</b> ' + esc(lv.goal) +
+        (prog ? '' : ' <span class="cell-sub">Уровень ещё не выбран — откройте игровое поле и пройдите самооценку.</span>') + '</div>' +
+      '<div><b>Что делать сейчас:</b><ul>' + next.map(function (q) { return '<li>' + esc(q.text) + '</li>'; }).join('') + '</ul></div></div>';
+  }
+
+  /* ---------- Риски ---------- */
+
+  var RISK_CAT = { tech: 'Технология', market: 'Рынок', finance: 'Финансы', legal: 'Права и РИД', team: 'Команда', regulatory: 'Регуляторика' };
+  var RISK_STATUS = { open: ['Открыт', 'bad'], mitigating: ['Снижаем', 'warn'], closed: ['Закрыт', 'ok'] };
+
+  function riskLevel(r) {
+    var score = (Number(r.probability) || 0) * (Number(r.impact) || 0);
+    return score >= 15 ? 'high' : (score >= 8 ? 'mid' : 'low');
+  }
+
+  function renderRisks() {
+    var risks = arr('risks');
+    var heat = el('riskHeat');
+    if (!heat) return;
+    var cells = '';
+    for (var p = 5; p >= 1; p--) {
+      for (var i = 1; i <= 5; i++) {
+        var lvl = p * i >= 15 ? 'high' : (p * i >= 8 ? 'mid' : 'low');
+        var here = risks.filter(function (r) { return r.status !== 'closed' && Number(r.probability) === p && Number(r.impact) === i; });
+        cells += '<div class="risk-cell risk-cell--' + lvl + '" data-p="' + p + '" data-i="' + i + '">' +
+          here.map(function (r) { return '<span class="risk-chip" data-risk="' + esc(r.id) + '">' + esc(r.id) + '</span>'; }).join('') + '</div>';
+      }
+    }
+    heat.innerHTML = '<div class="risk-axis-y">Вероятность →</div><div class="risk-grid">' + cells + '</div><div class="risk-axis-x">Влияние на стартап →</div>';
+    heat.querySelectorAll('.risk-chip').forEach(function (chip) {
+      var r = risks.filter(function (x) { return x.id === chip.getAttribute('data-risk'); })[0];
+      chip.addEventListener('mousemove', function (e) {
+        showTip(e, '<b>' + esc(r.id) + ' · ' + esc(RISK_CAT[r.category] || r.category || '') + '</b><br>' + esc(r.title) + '<br><i>Что делаем: ' + esc(r.mitigation || '—') + '</i>');
+      });
+      chip.addEventListener('mouseleave', hideTip);
+    });
+
+    var sorted = risks.slice().sort(function (a, b) {
+      var c = (a.status === 'closed') - (b.status === 'closed');
+      return c || (Number(b.probability) * Number(b.impact)) - (Number(a.probability) * Number(a.impact));
+    });
+    el('risksTable').innerHTML =
+      '<thead><tr><th>Риск</th><th class="num">В × В</th><th>Что делаем</th><th>Статус</th></tr></thead><tbody>' +
+      sorted.map(function (r) {
+        var st = RISK_STATUS[r.status] || RISK_STATUS.open;
+        var score = (Number(r.probability) || 0) * (Number(r.impact) || 0);
+        return '<tr' + (riskLevel(r) === 'high' && r.status !== 'closed' ? ' class="row-stale"' : '') + '><td><div class="cell-title">' + esc(r.id) + ' · ' + esc(r.title) + '</div>' +
+          '<div class="cell-sub">' + esc(RISK_CAT[r.category] || r.category || '') + (r.owner ? ' · ' + esc(r.owner) : '') + '</div></td>' +
+          '<td class="num">' + score + '</td><td>' + esc(r.mitigation || '—') + '</td>' +
+          '<td><span class="pill pill--' + st[1] + '">' + st[0] + '</span></td></tr>';
+      }).join('') +
+      (risks.length ? '' : '<tr><td colspan="4" class="empty">Добавьте риски в data/dashboard.json → risks или соберите реестр с агентом «Риск-менеджер»</td></tr>') +
+      '</tbody>';
+  }
+
+  var riskBtn = el('riskAgent');
+  if (riskBtn) {
+    riskBtn.addEventListener('click', function () {
+      var list = arr('risks').map(function (r) {
+        return r.id + ' «' + r.title + '» (вероятность ' + r.probability + ', влияние ' + r.impact + ', статус ' + r.status + ')';
+      }).join('; ');
+      document.dispatchEvent(new CustomEvent('aios-launch-skill', { detail: {
+        skill_id: 'risk-manager', name: 'Риск-менеджер',
+        prompt: 'Запусти навык «Риск-менеджер»: работай строго по его алгоритму. Наш стартап: ' + (state.data.startup || '') + ' — ' +
+          (state.data.tagline || '') + '. Текущий реестр рисков: ' + (list || 'пока пуст') + '. Проверь, каких рисков не хватает, переоцени и предложи меры на ближайший месяц.'
+      } }));
+    });
+  }
+
   /* ---------- фильтры-чипы ---------- */
 
   function setChip(group, value) {
@@ -479,7 +587,7 @@
     var parts = [
       ['KPI', renderKpi], ['гипотезы', renderHypotheses], ['воронка', renderFunnel], ['рынок', renderMarket],
       ['юнит-экономика', renderEconomics], ['деньги', renderCash], ['конкуренты', renderCompetitors],
-      ['команда', renderTeam], ['вехи', renderMilestones]
+      ['команда', renderTeam], ['вехи', renderMilestones], ['путь стартапа', renderJourney], ['риски', renderRisks]
     ];
     /* ошибка в одном виджете (например, из-за своих данных) не ломает остальные */
     parts.forEach(function (p) {
