@@ -405,16 +405,44 @@
     });
   }
 
-  /** Регистрация: {login, password, website?honeypot, consent_pdn, consent_policy} → {ok, email}. Письмо — через SMTP. */
-  function register(login, password, website, consentPdn, consentPolicy) {
+  /** Регистрация: {login, password, website?honeypot, consent_pdn, consent_policy, account_type} → {ok, email}.
+      account_type: 'startup' — команда стартапа (по умолчанию), 'company' — компания-заказчик. Письмо — через SMTP. */
+  function register(login, password, website, consentPdn, consentPolicy, accountType) {
     return request('POST', '/auth/register', {
       login: login,
       password: password,
       website: website || '',
       consent_pdn: !!consentPdn,
-      consent_policy: !!consentPolicy
+      consent_policy: !!consentPolicy,
+      account_type: accountType === 'company' ? 'company' : 'startup'
     });
   }
+
+  /** Режим аккаунта: 'startup' ⇄ 'company' → публичный профиль пользователя. */
+  function setAccountType(token, accountType) {
+    return request('PATCH', '/auth/account-type', { account_type: accountType }, token);
+  }
+
+  /* ---------- «Запросы компаний» и «Кабинет заказчика» (/api/challenges, /api/company) ---------- */
+
+  function challengesList(token) { return request('GET', '/challenges', undefined, token); }
+  function challengeGet(token, id) { return request('GET', '/challenges/' + encodeURIComponent(id), undefined, token); }
+  function challengeCreate(token, data) { return request('POST', '/challenges', data || {}, token); }
+  function challengeUpdate(token, id, data) { return request('PATCH', '/challenges/' + encodeURIComponent(id), data, token); }
+  function challengeDelete(token, id) { return request('DELETE', '/challenges/' + encodeURIComponent(id), undefined, token); }
+  function challengeQuality(token, data) { return request('POST', '/challenges/quality', data || {}, token); }
+  function challengeRespond(token, id, data) {
+    return request('POST', '/challenges/' + encodeURIComponent(id) + '/responses', data, token);
+  }
+  function challengeResponses(token, id) {
+    return request('GET', '/challenges/' + encodeURIComponent(id) + '/responses', undefined, token);
+  }
+  function challengeResponseUpdate(token, id, rid, data) {
+    return request('PATCH', '/challenges/' + encodeURIComponent(id) + '/responses/' + encodeURIComponent(rid), data, token);
+  }
+  function myChallengeResponses(token) { return request('GET', '/challenge-responses/mine', undefined, token); }
+  function companyGet(token) { return request('GET', '/company', undefined, token); }
+  function companySave(token, data) { return request('PUT', '/company', data, token); }
 
   /** Повторная отправка письма подтверждения: {login, password} → {ok}. */
   function resendConfirmation(login, password) {
@@ -1332,6 +1360,19 @@
     getSession: getSession,
     deleteSession: deleteSession,
     register: register,
+    setAccountType: setAccountType,
+    challengesList: challengesList,
+    challengeGet: challengeGet,
+    challengeCreate: challengeCreate,
+    challengeUpdate: challengeUpdate,
+    challengeDelete: challengeDelete,
+    challengeQuality: challengeQuality,
+    challengeRespond: challengeRespond,
+    challengeResponses: challengeResponses,
+    challengeResponseUpdate: challengeResponseUpdate,
+    myChallengeResponses: myChallengeResponses,
+    companyGet: companyGet,
+    companySave: companySave,
     resendConfirmation: resendConfirmation,
     login: login,
     logout: logout,

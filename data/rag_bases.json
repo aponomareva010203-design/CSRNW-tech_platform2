@@ -135,12 +135,13 @@
       "image_url": "/data/icons/rag-1a0e5c0104.svg",
       "project": "",
       "domain": "Создание и развитие университетских стартапов",
-      "description_ru": "Трек стартап-студии по этапам с контрольными точками, роль трекера, формулировка и проверка гипотез (CustDev, MVP, пилот), юнит-экономика и подготовка к инвестициям.",
-      "documents_count": 3,
+      "description_ru": "Трек стартап-студии по этапам с контрольными точками, роль трекера, формулировка и проверка гипотез (CustDev, MVP, пилот), юнит-экономика, подготовка к инвестициям и управление рисками стартапа (реестр, вероятность × влияние, меры).",
+      "documents_count": 4,
       "documents": [
         "01_trek_studii.md",
         "02_gipotezy_custdev.md",
-        "03_unit_ekonomika_investicii.md"
+        "03_unit_ekonomika_investicii.md",
+        "04_upravlenie_riskami.md"
       ],
       "vector_db": "Qdrant",
       "embedding_model": "text-embedding-3-small",
@@ -372,12 +373,13 @@
       "image_url": "/data/icons/rag-1a0e5c0110.svg",
       "project": "",
       "domain": "Подготовка стартапа к разговору с инвестором, грантовым фондом и индустриальным партнёром",
-      "description_ru": "Структура питч-дека на 10–12 слайдов под разные аудитории и одностраничник, шкала инвестиционной готовности (IRL), что проверяет инвестор (due diligence) и красные флаги, комната данных, таблица капитала, вестинг, раунды и размывание долей, доля вуза. Основа агента «Питч-коуч».",
-      "documents_count": 3,
+      "description_ru": "Структура питч-дека на 10–12 слайдов под разные аудитории и одностраничник, шкала инвестиционной готовности (IRL), что проверяет инвестор (due diligence) и красные флаги, комната данных, таблица капитала, вестинг, раунды и размывание долей, доля вуза, оценка стоимости стартапа на ранней стадии (Беркус, факторы риска, скоринговый и венчурный методы). Основа агентов «Питч-коуч» и «Оценщик стоимости стартапа».",
+      "documents_count": 4,
       "documents": [
         "01_pitch_dek.md",
         "02_investicionnaya_gotovnost.md",
-        "03_doli_i_raundy.md"
+        "03_doli_i_raundy.md",
+        "04_ocenka_stoimosti_startapa.md"
       ],
       "vector_db": "Qdrant",
       "embedding_model": "text-embedding-3-small",
@@ -389,12 +391,42 @@
         "IRL",
         "cap table",
         "раунд",
-        "due diligence"
+        "due diligence",
+        "оценка стоимости"
       ],
       "ontology_id": "onto-1a0e5c0002",
       "project_id": "",
       "sensitive": false,
       "corpus": "/data/rag/corpus/rag-1a0e5c0110/",
+      "references": []
+    },
+    {
+      "id": "rag-1a0e5c0111",
+      "name": "Запросы индустрии: как компании формулируют задачи для стартапов",
+      "image_url": "/data/icons/rag-1a0e5c0111.svg",
+      "project": "",
+      "domain": "Компания как квалифицированный заказчик студенческих стартапов",
+      "description_ru": "Почему компании редко становятся заказчиками студенческих стартапов и что такое квалифицированный заказчик; открытый вызов вместо технического задания; форматы сотрудничества; процесс формулирования запроса в компании в пять шагов — роли, интервью с подразделениями, матрица отбора болей, поля запроса, пилот и решение. Основа «Кабинета заказчика» и агента «Архитектор запроса компании».",
+      "documents_count": 2,
+      "documents": [
+        "01_pochemu_kompanii_ne_zakazchiki.md",
+        "02_process_formulirovaniya_zaprosa.md"
+      ],
+      "vector_db": "Qdrant",
+      "embedding_model": "text-embedding-3-small",
+      "status": "Активна",
+      "access_url": "",
+      "tags": [
+        "запросы компаний",
+        "открытый вызов",
+        "заказчик",
+        "пилот",
+        "открытые инновации"
+      ],
+      "ontology_id": "onto-1a0e5c0001",
+      "project_id": "",
+      "sensitive": false,
+      "corpus": "/data/rag/corpus/rag-1a0e5c0111/",
       "references": []
     }
   ]

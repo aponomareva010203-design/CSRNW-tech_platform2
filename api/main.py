@@ -26,6 +26,7 @@ from .routers.catalog import router as catalog_router
 from .routers.model_registry import router as model_registry_router
 from .routers.telegram import router as telegram_router
 from .routers.polygons import router as polygons_router
+from .routers.challenges import router as challenges_router
 from .runtime.user_context import scheduler_loop
 from .schemas import ModelsResponse, ModelSource
 
@@ -155,6 +156,10 @@ app.include_router(telegram_router)
 # Полигоны: /api/polygons/* — сценарная модель портфеля по УГТ (Монте-Карло,
 # без LLM), проверка гипотез и ИИ-фокус-группа (api/runtime/polygons.py).
 app.include_router(polygons_router)
+
+# «Запросы компаний» и «Кабинет заказчика»: /api/challenges*, /api/company —
+# компании формулируют запросы для студенческих стартапов, команды откликаются.
+app.include_router(challenges_router)
 
 
 @app.get("/api/models", response_model=ModelsResponse)

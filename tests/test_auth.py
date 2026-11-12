@@ -38,8 +38,9 @@ def test_users_store(tmp_path):
     assert user["confirmed"] is False  # новая регистрация ждёт подтверждения e-mail
     # в публичном представлении нет секретов
     assert set(store.public(user)) == {
-        "id", "login", "name", "role", "created_at", "last_login", "confirmed"
+        "id", "login", "name", "role", "account_type", "created_at", "last_login", "confirmed"
     }
+    assert store.public(user)["account_type"] == "startup"  # по умолчанию — команда стартапа
 
     assert store.verify_password(store.get(user["id"]), "secret") is True
     assert store.verify_password(store.get(user["id"]), "wrong") is False

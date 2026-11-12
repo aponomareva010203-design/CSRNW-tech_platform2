@@ -16,7 +16,7 @@
 <meta name="twitter:title" content="AIOS — рабочая среда команды университетского технологического стартапа">
 <meta name="twitter:description" content="Рабочая среда команд университетских технологических стартапов: гипотезы, CustDev, рынок, юнит-экономика и ИИ-агенты">
 <meta name="twitter:image" content="https://176.108.244.194.sslip.io/assets/og-image.png">
-<link rel="stylesheet" href="css/style.css?v=20261110a">
+<link rel="stylesheet" href="css/style.css?v=20261112a">
 </head>
 <body>
 <div class="layout">
@@ -31,8 +31,17 @@
         <button class="side-group-title side-group-toggle" type="button" aria-expanded="true" aria-controls="sideGroupDashboards">Дашборды</button>
         <div class="side-group-items" id="sideGroupDashboards">
         <a class="side-link active" href="index.html">Рабочий стол стартапа</a>
+        <a class="side-link" href="journey.html">Путь стартапа</a>
         <a class="side-link" href="pilot.html">Статус внедрения AIOS</a>
         <a class="side-link" href="showcase.html">Витрина механизмов поддержки</a>
+        </div>
+      </div>
+
+      <div class="side-group side-group--collapsible" data-side-group="industry">
+        <button class="side-group-title side-group-toggle" type="button" aria-expanded="true" aria-controls="sideGroupIndustry">Стартапы и компании</button>
+        <div class="side-group-items" id="sideGroupIndustry">
+        <a class="side-link" href="challenges.html">Запросы компаний</a>
+        <a class="side-link" href="company.html">Кабинет заказчика</a>
         </div>
       </div>
 
@@ -122,6 +131,17 @@
     <div class="kpi-row" id="kpiRow"></div>
 
     <div class="dash-grid">
+
+      <article class="widget widget--wide" id="wJourney">
+        <header class="widget-head">
+          <div>
+            <h2>Путь стартапа</h2>
+            <p class="widget-sub">Где команда на пути от идеи до компании, что делать сейчас и что нужно для перехода на следующий уровень</p>
+          </div>
+          <a class="dash-btn" href="journey.html">Открыть игровое поле →</a>
+        </header>
+        <div id="journeyMini"></div>
+      </article>
 
       <article class="widget widget--wide" id="wHypotheses">
         <header class="widget-head">
@@ -228,6 +248,20 @@
         <div class="table-wrap"><table class="dtable" id="milestonesTable"></table></div>
       </article>
 
+      <article class="widget widget--wide" id="wRisks">
+        <header class="widget-head">
+          <div>
+            <h2>Риски стартапа</h2>
+            <p class="widget-sub">Вероятность × влияние: красная зона — заниматься на этой неделе. Реестр ведёт агент «Риск-менеджер»</p>
+          </div>
+          <button type="button" class="dash-btn" id="riskAgent">Разобрать риски с ИИ-агентом</button>
+        </header>
+        <div class="risk-layout">
+          <div class="risk-heat" id="riskHeat" role="img" aria-label="Тепловая карта рисков"></div>
+          <div class="table-wrap"><table class="dtable" id="risksTable"></table></div>
+        </div>
+      </article>
+
     </div>
   </section>
 
@@ -237,11 +271,11 @@
 </div>
 
 <script src="js/cookie-consent.js?v=20261001b"></script>
-<script src="js/api.js?v=20261029a"></script>
-<script src="js/auth.js?v=20261029a"></script>
+<script src="js/api.js?v=20261112a"></script>
+<script src="js/auth.js?v=20261112a"></script>
 <script src="js/agent_views.js?v=20260929m"></script>
 <script src="js/thinking.js?v=20260925zq"></script>
 <script src="js/workspace.js?v=20261110a"></script>
-<script src="js/dashboard.js?v=20261110a"></script>
+<script src="js/dashboard.js?v=20261112a"></script>
 </body>
 </html>

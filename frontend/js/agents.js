@@ -2,8 +2,8 @@
    Страница «Агенты».
    Карточки агентов приходят из data/skills.json (в коде не
    хардкодятся) и раскладываются по трём разделам по полю
-   category: general — общие, special — специальные,
-   service — служебные. Данные грузятся лениво при первом
+   category: general — общие, company — для компаний-заказчиков,
+   special — специальные, service — служебные. Данные грузятся лениво при первом
    разворачивании спойлера.
 
    Обратная связь (звёзды, комментарии, применение в проектах) —
@@ -15,6 +15,7 @@
 (function () {
   var SECTIONS = [
     { spoiler: 'spoilerGeneral', grid: 'gridGeneral', category: 'general' },
+    { spoiler: 'spoilerCompany', grid: 'gridCompany', category: 'company' },
     { spoiler: 'spoilerSpecial', grid: 'gridSpecial', category: 'special' },
     { spoiler: 'spoilerService', grid: 'gridService', category: 'service' }
   ];
